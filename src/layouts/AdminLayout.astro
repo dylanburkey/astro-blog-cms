@@ -4,14 +4,40 @@ export interface Props {
   siteName?: string;
   logoPath?: string;
   basePath?: string;
+  /** Theme configuration */
+  theme?: {
+    /** Background color or gradient */
+    background?: string;
+    /** Surface color (cards, sidebar) */
+    surface?: string;
+    /** Primary accent color */
+    primary?: string;
+    /** Text color */
+    text?: string;
+    /** Muted text color */
+    textMuted?: string;
+    /** Border color */
+    border?: string;
+  };
 }
 
 const { 
   title, 
   siteName = 'Admin',
   logoPath,
-  basePath = '/admin'
+  basePath = '/admin',
+  theme = {}
 } = Astro.props;
+
+// Theme defaults
+const colors = {
+  background: theme.background || '#0a0a0a',
+  surface: theme.surface || '#1a1a1a',
+  primary: theme.primary || '#6366f1',
+  text: theme.text || '#ffffff',
+  textMuted: theme.textMuted || '#999999',
+  border: theme.border || '#333333',
+};
 
 const navItems = [
   { href: basePath, label: 'Dashboard', icon: 'dashboard' },
@@ -115,12 +141,19 @@ const navItems = [
   </body>
 </html>
 
-<style is:global>
+<style is:global define:vars={{ 
+  bgColor: colors.background, 
+  surfaceColor: colors.surface,
+  primaryColor: colors.primary,
+  textColor: colors.text,
+  textMutedColor: colors.textMuted,
+  borderColor: colors.border
+}}>
   :root {
-    --color-primary: #6366f1;
-    --color-primary-dark: #4f46e5;
-    --color-primary-alpha-10: rgba(99, 102, 241, 0.1);
-    --color-primary-alpha-20: rgba(99, 102, 241, 0.2);
+    --color-primary: var(--primaryColor, #6366f1);
+    --color-primary-dark: color-mix(in srgb, var(--primaryColor, #6366f1) 80%, black);
+    --color-primary-alpha-10: color-mix(in srgb, var(--primaryColor, #6366f1) 10%, transparent);
+    --color-primary-alpha-20: color-mix(in srgb, var(--primaryColor, #6366f1) 20%, transparent);
     --color-secondary: #8b5cf6;
     --color-accent: #10b981;
     --color-tertiary: #f59e0b;
@@ -128,13 +161,13 @@ const navItems = [
     --color-error: #ef4444;
     --color-success: #10b981;
     
-    --color-background: #0a0a0a;
-    --color-background-secondary: #111111;
-    --color-surface: #1a1a1a;
-    --color-surface-light: #262626;
-    --color-border: #333333;
-    --color-text: #ffffff;
-    --color-text-muted: #999999;
+    --color-background: var(--bgColor, #0a0a0a);
+    --color-background-secondary: color-mix(in srgb, var(--bgColor, #0a0a0a) 90%, white);
+    --color-surface: var(--surfaceColor, #1a1a1a);
+    --color-surface-light: color-mix(in srgb, var(--surfaceColor, #1a1a1a) 80%, white);
+    --color-border: var(--borderColor, #333333);
+    --color-text: var(--textColor, #ffffff);
+    --color-text-muted: var(--textMutedColor, #999999);
     
     --radius-sm: 0.25rem;
     --radius-md: 0.5rem;

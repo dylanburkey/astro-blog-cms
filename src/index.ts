@@ -8,8 +8,18 @@
  */
 
 // Configuration
-export { defaultConfig, configureCMS, getConfig, getNavItems } from './config';
-export type { CMSConfig } from './config';
+export { 
+  defaultConfig, 
+  configureCMS, 
+  getConfig, 
+  getNavItems,
+  // Theme presets
+  defaultTheme,
+  lightTheme,
+  blueTheme,
+  greenTheme,
+} from './config';
+export type { CMSConfig, CMSTheme } from './config';
 
 // Utils
 export * from './utils/blog';
