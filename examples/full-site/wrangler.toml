@@ -1,0 +1,19 @@
+name = "my-blog"
+compatibility_date = "2024-01-01"
+pages_build_output_dir = "./dist"
+
+# Create your D1 database:
+# wrangler d1 create my-blog-db
+# Then paste the database_id below
+
+[[d1_databases]]
+binding = "DB"
+database_name = "my-blog-db"
+database_id = "YOUR_DATABASE_ID"
+
+# Create your R2 bucket:
+# wrangler r2 bucket create my-blog-images
+
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "my-blog-images"

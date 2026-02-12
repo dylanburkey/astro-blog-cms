@@ -1,0 +1,170 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const db = Astro.locals.runtime?.env?.DB;
+let recentPosts: any[] = [];
+
+if (db) {
+  try {
+    const result = await db.prepare(`
+      SELECT id, slug, title, excerpt, cover_image, published_at
+      FROM blog_posts 
+      WHERE status = 'published'
+      ORDER BY published_at DESC
+      LIMIT 5
+    `).all();
+    recentPosts = result.results || [];
+  } catch (e) {
+    // Table might not exist yet
+  }
+}
+---
+
+<BaseLayout title="Home">
+  <section class="hero">
+    <h1>Welcome to My Blog</h1>
+    <p>Thoughts, tutorials, and more.</p>
+    <div class="hero-actions">
+      <a href="/blog" class="btn btn-primary">Read the Blog</a>
+      <a href="/admin" class="btn btn-secondary">Admin Panel</a>
+    </div>
+  </section>
+
+  <section class="recent-posts">
+    <h2>Recent Posts</h2>
+    {recentPosts.length === 0 ? (
+      <div class="empty-state">
+        <p>No posts yet.</p>
+        <a href="/admin/blog/new" class="btn btn-primary">Create your first post →</a>
+      </div>
+    ) : (
+      <>
+        <ul class="post-list">
+          {recentPosts.map(post => (
+            <li>
+              <a href={`/blog/${post.slug}`}>
+                <h3>{post.title}</h3>
+                {post.excerpt && <p>{post.excerpt}</p>}
+                <time>{new Date(post.published_at).toLocaleDateString()}</time>
+              </a>
+            </li>
+          ))}
+        </ul>
+        <a href="/blog" class="view-all">View all posts →</a>
+      </>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 3rem;
+  }
+
+  .hero h1 {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .hero p {
+    color: var(--color-muted);
+    font-size: 1.25rem;
+    margin-bottom: 2rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+
+  .btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    filter: brightness(1.1);
+    text-decoration: none;
+  }
+
+  .btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-secondary:hover {
+    border-color: var(--color-primary);
+    text-decoration: none;
+  }
+
+  .recent-posts h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: var(--color-surface);
+    border-radius: 0.5rem;
+  }
+
+  .empty-state p {
+    color: var(--color-muted);
+    margin-bottom: 1rem;
+  }
+
+  .post-list {
+    list-style: none;
+    display: grid;
+    gap: 1rem;
+  }
+
+  .post-list li a {
+    display: block;
+    padding: 1.5rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: border-color 0.2s;
+  }
+
+  .post-list li a:hover {
+    border-color: var(--color-primary);
+  }
+
+  .post-list h3 {
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+  }
+
+  .post-list p {
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .post-list time {
+    font-size: 0.875rem;
+    color: var(--color-muted);
+  }
+
+  .view-all {
+    display: block;
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+</style>

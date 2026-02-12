@@ -1,0 +1,211 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const { slug } = Astro.params;
+const db = Astro.locals.runtime?.env?.DB;
+
+let post: any = null;
+
+if (db && slug) {
+  try {
+    post = await db.prepare(`
+      SELECT 
+        p.*,
+        u.name as author_name,
+        u.avatar as author_avatar
+      FROM blog_posts p
+      LEFT JOIN admin_users u ON p.author_id = u.id
+      WHERE p.slug = ? AND p.status = 'published'
+    `).bind(slug).first();
+    
+    if (post) {
+      // Track view
+      await db.prepare(`
+        INSERT INTO blog_views (post_id, ip_address, user_agent)
+        VALUES (?, ?, ?)
+      `).bind(
+        post.id, 
+        Astro.request.headers.get('cf-connecting-ip') || 'unknown',
+        Astro.request.headers.get('user-agent') || 'unknown'
+      ).run();
+    }
+  } catch (e) {
+    console.error('Error fetching post:', e);
+  }
+}
+
+if (!post) {
+  return Astro.redirect('/blog');
+}
+
+// Calculate reading time
+const wordCount = post.content?.replace(/<[^>]*>/g, '').split(/\s+/).length || 0;
+const readingTime = Math.ceil(wordCount / 200);
+---
+
+<BaseLayout 
+  title={post.title} 
+  description={post.meta_description || post.excerpt}
+  image={post.og_image || post.cover_image}
+>
+  <article class="blog-post">
+    {post.cover_image && (
+      <img src={post.cover_image} alt={post.cover_image_alt || post.title} class="cover-image" />
+    )}
+    
+    <header>
+      <h1>{post.title}</h1>
+      <div class="meta">
+        <div class="author">
+          {post.author_avatar && (
+            <img src={post.author_avatar} alt={post.author_name} class="avatar" />
+          )}
+          <span>{post.author_name || 'Anonymous'}</span>
+        </div>
+        <span class="separator">·</span>
+        <time datetime={post.published_at}>
+          {new Date(post.published_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </time>
+        <span class="separator">·</span>
+        <span>{readingTime} min read</span>
+      </div>
+    </header>
+    
+    <div class="content" set:html={post.content} />
+    
+    <footer>
+      <a href="/blog" class="back-link">← Back to Blog</a>
+    </footer>
+  </article>
+</BaseLayout>
+
+<style>
+  .blog-post {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .cover-image {
+    width: 100%;
+    max-height: 450px;
+    object-fit: cover;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  header h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 1rem;
+  }
+
+  .meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+    flex-wrap: wrap;
+  }
+
+  .author {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .separator {
+    opacity: 0.5;
+  }
+
+  .content {
+    font-size: 1.125rem;
+    line-height: 1.75;
+  }
+
+  .content :global(h2) {
+    font-size: 1.75rem;
+    margin: 2.5rem 0 1rem;
+  }
+
+  .content :global(h3) {
+    font-size: 1.375rem;
+    margin: 2rem 0 0.75rem;
+  }
+
+  .content :global(p) {
+    margin-bottom: 1.5rem;
+  }
+
+  .content :global(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    margin: 2rem 0;
+  }
+
+  .content :global(pre) {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+  }
+
+  .content :global(code) {
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+    font-size: 0.9em;
+  }
+
+  .content :global(blockquote) {
+    border-left: 3px solid var(--color-primary);
+    padding-left: 1.5rem;
+    margin: 1.5rem 0;
+    color: var(--color-muted);
+    font-style: italic;
+  }
+
+  .content :global(ul),
+  .content :global(ol) {
+    margin: 1.5rem 0;
+    padding-left: 1.5rem;
+  }
+
+  .content :global(li) {
+    margin-bottom: 0.5rem;
+  }
+
+  footer {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .back-link {
+    color: var(--color-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover {
+    color: var(--color-primary);
+  }
+</style>

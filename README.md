@@ -1,263 +1,170 @@
 # Astro Blog CMS
 
-A complete, production-ready blog CMS with a rich WYSIWYG editor, built for Astro + Cloudflare stack (D1 database, R2 storage, Workers runtime).
+A lightweight, self-hosted blog CMS for Astro + Cloudflare. No vendor lock-in, no monthly fees, no bloat.
 
-**Extracted from [Athena AI](https://athena.ai)** - battle-tested in production.
+**→ [Full Setup Guide](./examples/full-site/README.md)**
+
+## Why This CMS?
+
+| | Astro Blog CMS | Sanity / Contentful |
+|---|---|---|
+| **Setup** | Copy files, run migration | Account signup, API keys, webhooks |
+| **Data ownership** | Your database | Their cloud |
+| **Cost** | Free (Cloudflare free tier) | $$$ at scale |
+| **Vendor lock-in** | None | Yes |
+| **Dependencies** | Just Astro | Multiple SDKs |
 
 ## Features
 
-- ✅ **Rich WYSIWYG Editor** - Bold, italic, headings, lists, blockquotes, code blocks
-- ✅ **Font Controls** - Family, size, text color, background color
-- ✅ **Image Management** - Upload to R2, media library, drag & drop
-- ✅ **Layout Templates** - Image galleries, split layouts, text columns
-- ✅ **SEO Tools** - Meta title/description, keywords, Open Graph
-- ✅ **Categories & Tags** - Hierarchical categories, flexible tagging
-- ✅ **Publishing Workflow** - Draft/publish states, scheduled publishing
-- ✅ **Analytics** - View tracking, engagement metrics
-- ✅ **Comments** - Built-in comment system with moderation
-- ✅ **Admin Authentication** - Secure session-based auth
-- ✅ **Media Library** - Browse and manage uploaded images
-- ✅ **Responsive** - Mobile-first admin interface
+- ✅ **WYSIWYG Editor** - Rich text with formatting, images, layouts
+- ✅ **Image Uploads** - Direct to Cloudflare R2
+- ✅ **Media Library** - Browse and manage uploads
+- ✅ **Categories & Tags** - Organize your content
+- ✅ **User Management** - Multiple admins with roles
+- ✅ **SEO Fields** - Meta titles, descriptions, Open Graph
+- ✅ **Settings Panel** - Configure without code
+- ✅ **Dark Theme** - Easy on the eyes
 
 ## Tech Stack
 
-- **Framework**: Astro 5.x with SSR
-- **Runtime**: Cloudflare Workers
-- **Database**: Cloudflare D1 (SQLite at edge)
-- **Storage**: Cloudflare R2 (S3-compatible)
-- **Styling**: Native CSS with custom properties
+- **Astro** 5.x with SSR
+- **Cloudflare Workers** runtime
+- **Cloudflare D1** database (SQLite at edge)
+- **Cloudflare R2** storage (S3-compatible)
 
 ## Quick Start
 
-### 1. Install
-
 ```bash
-npm install @dylanburkey/astro-blog-cms
-# or
+# 1. Install
 pnpm add @dylanburkey/astro-blog-cms
+
+# 2. Copy admin pages to your project
+cp -r node_modules/@dylanburkey/astro-blog-cms/src/pages/admin src/pages/
+cp -r node_modules/@dylanburkey/astro-blog-cms/src/layouts src/
+cp -r node_modules/@dylanburkey/astro-blog-cms/src/lib src/
+
+# 3. Run database migrations
+wrangler d1 execute YOUR_DB --file=node_modules/@dylanburkey/astro-blog-cms/migrations/0001_blog_schema.sql
+wrangler d1 execute YOUR_DB --file=node_modules/@dylanburkey/astro-blog-cms/migrations/0002_blog_engagement.sql
+wrangler d1 execute YOUR_DB --file=node_modules/@dylanburkey/astro-blog-cms/migrations/0003_settings_table.sql
+
+# 4. Start dev server
+pnpm dev
+
+# 5. Visit http://localhost:4321/admin
 ```
 
-### 2. Copy Pages to Your Project
-
-```bash
-# Copy admin pages
-cp -r node_modules/@dylanburkey/astro-blog-cms/src/pages/admin your-project/src/pages/
-
-# Copy layout
-cp node_modules/@dylanburkey/astro-blog-cms/src/layouts/AdminLayout.astro your-project/src/layouts/
-
-# Copy styles
-cp node_modules/@dylanburkey/astro-blog-cms/src/styles/blog-content.css your-project/src/styles/
-```
-
-### 3. Run Migrations
-
-```bash
-# Create the database tables
-wrangler d1 execute YOUR_DB_NAME --file=node_modules/@dylanburkey/astro-blog-cms/migrations/0001_blog_schema.sql
-wrangler d1 execute YOUR_DB_NAME --file=node_modules/@dylanburkey/astro-blog-cms/migrations/0002_blog_engagement.sql
-```
-
-### 4. Configure Cloudflare
-
-Add to your `wrangler.toml`:
-
-```toml
-[[d1_databases]]
-binding = "DB"
-database_name = "your-db-name"
-database_id = "your-db-id"
-
-[[r2_buckets]]
-binding = "ASSETS_BUCKET"
-bucket_name = "your-bucket-name"
-```
-
-### 5. Create Admin User
-
-```bash
-# Generate password hash (run in browser console or Node)
-# Or use the provided utility:
-wrangler d1 execute YOUR_DB_NAME --command="INSERT INTO admin_users (email, password_hash, name, role) VALUES ('admin@example.com', 'YOUR_HASH', 'Admin', 'admin')"
-```
-
-## File Structure
-
-```
-astro-blog-cms/
-├── migrations/
-│   ├── 0001_blog_schema.sql      # Core tables (posts, categories, tags, media)
-│   └── 0002_blog_engagement.sql  # Analytics & engagement tables
-├── src/
-│   ├── components/
-│   │   ├── editor/
-│   │   │   ├── EditorToolbar.astro    # Main WYSIWYG toolbar
-│   │   │   ├── ImageToolbar.astro     # Image editing controls
-│   │   │   ├── LayoutTemplates.astro  # Gallery & layout options
-│   │   │   └── TextLayouts.astro      # Text column layouts
-│   │   └── blog/
-│   │       ├── BlogCard.astro         # Post card for listings
-│   │       ├── BlogSidebar.astro      # Sidebar with categories/tags
-│   │       └── BlogComments.astro     # Comment display/form
-│   ├── layouts/
-│   │   └── AdminLayout.astro          # Admin panel layout
-│   ├── lib/
-│   │   ├── auth.ts                    # Authentication utilities
-│   │   ├── authService.ts             # Session management
-│   │   └── imageOptimization.ts       # Image processing
-│   ├── pages/
-│   │   └── admin/
-│   │       ├── blog/
-│   │       │   ├── index.astro        # Post list
-│   │       │   ├── new.astro          # Create post (WYSIWYG editor)
-│   │       │   └── edit/[id].astro    # Edit post
-│   │       ├── media/
-│   │       │   └── index.astro        # Media library
-│   │       ├── api/
-│   │       │   ├── blog/
-│   │       │   │   ├── create.json.ts
-│   │       │   │   ├── update.json.ts
-│   │       │   │   ├── delete/[id].json.ts
-│   │       │   │   └── duplicate/[id].json.ts
-│   │       │   ├── upload-image.json.ts
-│   │       │   ├── list-images.json.ts
-│   │       │   └── delete-image.json.ts
-│   │       └── login.astro
-│   ├── styles/
-│   │   └── blog-content.css           # Blog content styles
-│   ├── utils/
-│   │   └── blog.ts                    # Helper functions & types
-│   └── index.ts                       # Main exports
-├── LICENSE
-├── CONTRIBUTING.md
-└── README.md
-```
+**For a complete walkthrough, see the [Full Site Example](./examples/full-site/).**
 
 ## Admin Routes
 
 | Route | Description |
 |-------|-------------|
-| `/admin/login` | Admin login page |
-| `/admin/blog` | Blog post list with stats |
-| `/admin/blog/new` | Create new post (WYSIWYG editor) |
-| `/admin/blog/edit/[id]` | Edit existing post |
-| `/admin/media` | Media library (browse R2 uploads) |
-
-## API Endpoints
-
-### Blog Posts
-
-```typescript
-// Create post
-POST /admin/api/blog/create.json
-Content-Type: multipart/form-data
-Fields: title, slug, excerpt, content, cover_image, status, categories[], tags[]
-
-// Update post
-POST /admin/api/blog/update.json
-Fields: id, title, slug, excerpt, content, cover_image, status, categories[], tags[]
-
-// Delete post
-DELETE /admin/api/blog/delete/[id].json
-
-// Duplicate post
-POST /admin/api/blog/duplicate/[id].json
-```
-
-### Images
-
-```typescript
-// Upload image to R2
-POST /admin/api/upload-image.json
-Content-Type: multipart/form-data
-
-// List images from R2
-GET /admin/api/list-images.json
-
-// Delete image from R2
-DELETE /admin/api/delete-image.json
-Body: { key: "image-key.jpg" }
-```
+| `/admin` | Dashboard |
+| `/admin/blog` | Manage posts |
+| `/admin/blog/new` | Create post |
+| `/admin/blog/categories` | Manage categories |
+| `/admin/blog/tags` | Manage tags |
+| `/admin/media` | Media library |
+| `/admin/users` | User management |
+| `/admin/settings` | Site settings |
 
 ## Customization
 
-### Styling
+### Theming
 
-Override CSS custom properties in your global styles:
-
-```css
-:root {
-  --color-primary: #6366f1;
-  --color-surface: #1a1a1a;
-  --color-background: #0a0a0a;
-  --color-text: #ffffff;
-  --color-text-muted: #999999;
-  --color-border: #333333;
-  --radius-md: 0.5rem;
-}
+```astro
+<AdminLayout 
+  title="Posts"
+  siteName="My Blog"
+  logoPath="/logo.png"
+  theme={{
+    background: '#0f172a',
+    primary: '#3b82f6',
+    surface: '#1e293b'
+  }}
+/>
 ```
 
-### Admin Path
+### Theme Presets
 
-The admin uses `/admin` by default. To change it:
+```typescript
+import { defaultTheme, lightTheme, blueTheme, greenTheme } from '@dylanburkey/astro-blog-cms';
+```
 
-1. Move the `pages/admin` folder to your desired path
-2. Update links in `AdminLayout.astro`
-
-### Authentication
-
-The CMS uses cookie-based sessions. Customize `src/lib/auth.ts` for:
-- Different session duration
-- Additional auth providers
-- Role-based permissions
-
-## Database Schema
-
-### Core Tables
-
-- `admin_users` - Admin accounts with roles
-- `admin_sessions` - Session tokens
-- `blog_posts` - Post content, metadata, SEO fields
-- `blog_categories` - Hierarchical categories
-- `blog_tags` - Flexible tagging
-- `blog_post_categories` - Post-category relationships
-- `blog_post_tags` - Post-tag relationships
-- `blog_media` - Uploaded images/files
-- `blog_views` - Analytics tracking
-- `blog_comments` - User comments
-
-## TypeScript Support
+## TypeScript
 
 ```typescript
 import { 
-  type BlogPost, 
-  type BlogCategory, 
-  type BlogTag,
+  type BlogPost,
+  type CMSSettings,
+  getSettings,
   generateSlug,
   formatDate,
-  calculateReadingTime,
   paths 
 } from '@dylanburkey/astro-blog-cms';
 
-// Use types
-const post: BlogPost = { ... };
+// Get settings
+const settings = await getSettings(db);
 
-// Use utilities
-const slug = generateSlug("My Blog Post Title");
-const readTime = calculateReadingTime(post.content);
+// Generate URL-friendly slug
+const slug = generateSlug("My Post Title"); // "my-post-title"
 
-// Use path helpers
-const editUrl = paths.admin.blog.edit(post.id);
+// Path helpers
+const editUrl = paths.admin.blog.edit(123); // "/admin/blog/edit/123"
 ```
+
+## Database Schema
+
+```
+admin_users        - Admin accounts (email, password, role)
+admin_sessions     - Login sessions
+blog_posts         - Post content and metadata
+blog_categories    - Hierarchical categories
+blog_tags          - Flat tags
+blog_media         - Uploaded files
+blog_views         - View analytics
+blog_comments      - User comments
+cms_settings       - Site configuration
+```
+
+## Project Structure
+
+```
+your-project/
+├── src/
+│   ├── pages/
+│   │   ├── admin/          # CMS admin (copied from package)
+│   │   │   ├── blog/
+│   │   │   ├── media/
+│   │   │   ├── users/
+│   │   │   ├── settings/
+│   │   │   └── api/
+│   │   ├── blog/           # Your public blog pages
+│   │   │   ├── index.astro
+│   │   │   └── [slug].astro
+│   │   └── index.astro
+│   ├── layouts/
+│   │   └── AdminLayout.astro
+│   └── lib/
+│       └── auth.ts
+├── wrangler.toml
+└── package.json
+```
+
+## Examples
+
+- **[Full Site Example](./examples/full-site/)** - Complete blog with admin CMS
+- **[Basic Example](./examples/basic/)** - Minimal setup
 
 ## License
 
 MIT License - Use freely in personal and commercial projects.
 
-## Credits
+## Author
 
-Originally developed for [Athena AI](https://athena.ai) by Dylan Burkey.
+Created by [Dylan Burkey](https://github.com/dylanburkey)
 
 ## Contributing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for development setup and guidelines.
