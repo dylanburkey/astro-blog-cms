@@ -2,7 +2,6 @@
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { isAuthenticated } from '../../../lib/auth';
 
-// Check authentication
 const auth = await isAuthenticated(Astro);
 if (!auth.authenticated) {
   return Astro.redirect('/admin/login');
@@ -14,7 +13,7 @@ if (!auth.authenticated) {
     <header class="media-header">
       <div class="header-content">
         <h1>Media Library</h1>
-        <p>Manage your uploaded images and media files</p>
+        <p>Manage, edit, and organize your images</p>
       </div>
       <div class="header-actions">
         <button type="button" id="upload-btn" class="btn btn-primary">
@@ -37,14 +36,7 @@ if (!auth.authenticated) {
           <option value="name">Name A-Z</option>
           <option value="size">File Size</option>
         </select>
-        <button type="button" id="refresh-btn" class="btn btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"></polyline>
-            <polyline points="1 20 1 14 7 14"></polyline>
-            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-          </svg>
-          Refresh
-        </button>
+        <button type="button" id="refresh-btn" class="btn btn-secondary btn-sm">Refresh</button>
       </div>
       <div class="view-options">
         <button type="button" id="grid-view" class="view-btn active" title="Grid View">
@@ -70,25 +62,20 @@ if (!auth.authenticated) {
 
     <div id="media-grid" class="media-grid">
       <div class="loading-state">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"></circle>
-          <polyline points="12 6 12 12 16 14"></polyline>
-        </svg>
+        <div class="spinner"></div>
         <p>Loading images...</p>
       </div>
     </div>
 
-    <div id="media-list" class="media-list" style="display: none;">
+    <div id="media-list" class="media-list hidden">
       <div class="list-header">
         <div class="col-image">Image</div>
         <div class="col-name">Name</div>
         <div class="col-size">Size</div>
-        <div class="col-date">Upload Date</div>
+        <div class="col-date">Uploaded</div>
         <div class="col-actions">Actions</div>
       </div>
-      <div id="list-content" class="list-content">
-        <!-- List items will be populated here -->
-      </div>
+      <div id="list-content" class="list-content"></div>
     </div>
   </div>
 
@@ -97,19 +84,19 @@ if (!auth.authenticated) {
     <div class="modal-content">
       <div class="modal-header">
         <h2>Upload Images</h2>
-        <button type="button" class="modal-close">×</button>
+        <button type="button" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
         <div class="upload-area" id="upload-area">
-          <input type="file" id="file-input" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" multiple />
+          <input type="file" id="file-input" accept="image/*" multiple hidden />
           <label for="file-input" class="upload-label">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="17 8 12 3 7 8"></polyline>
               <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <span>Choose files or drag here</span>
-            <small>JPG, PNG, GIF, WebP up to 10MB each</small>
+            <span>Choose files or drag & drop</span>
+            <small>JPG, PNG, GIF, WebP up to 10MB</small>
           </label>
         </div>
         <div id="upload-progress" class="upload-progress"></div>
@@ -117,63 +104,180 @@ if (!auth.authenticated) {
     </div>
   </div>
 
-  <!-- Image Details Modal -->
-  <div id="details-modal" class="modal">
-    <div class="modal-content modal-large">
+  <!-- Image Editor Modal -->
+  <div id="editor-modal" class="modal">
+    <div class="modal-content modal-xl">
       <div class="modal-header">
-        <h2>Image Details</h2>
-        <button type="button" class="modal-close">×</button>
+        <h2>Edit Image</h2>
+        <button type="button" class="modal-close">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="image-details">
-          <div class="image-preview-large">
-            <img id="preview-image" src="" alt="" />
+        <div class="editor-layout">
+          <!-- Preview Panel -->
+          <div class="editor-preview">
+            <div class="preview-container">
+              <img id="editor-image" src="" alt="Preview" />
+            </div>
+            <div class="preview-info">
+              <span id="editor-dimensions">0 × 0</span>
+              <span id="editor-filesize">0 KB</span>
+            </div>
           </div>
-          <div class="image-info">
-            <div class="info-group">
-              <label>File Name:</label>
-              <input type="text" id="detail-filename" class="form-input" readonly />
-              <button type="button" id="copy-filename" class="copy-btn" title="Copy filename">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
+
+          <!-- Controls Panel -->
+          <div class="editor-controls">
+            <!-- Resize Section -->
+            <div class="control-section">
+              <h3>Resize</h3>
+              <div class="size-inputs">
+                <div class="input-group">
+                  <label for="resize-width">Width</label>
+                  <input type="number" id="resize-width" min="1" max="4000" />
+                  <span>px</span>
+                </div>
+                <button type="button" id="lock-ratio" class="lock-btn active" title="Lock aspect ratio">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                  </svg>
+                </button>
+                <div class="input-group">
+                  <label for="resize-height">Height</label>
+                  <input type="number" id="resize-height" min="1" max="4000" />
+                  <span>px</span>
+                </div>
+              </div>
+              <div class="preset-sizes">
+                <button type="button" class="preset-btn" data-size="1920x1080">1920×1080</button>
+                <button type="button" class="preset-btn" data-size="1280x720">1280×720</button>
+                <button type="button" class="preset-btn" data-size="800x600">800×600</button>
+                <button type="button" class="preset-btn" data-size="400x300">400×300</button>
+              </div>
             </div>
-            
-            <div class="info-group">
-              <label>Public URL:</label>
-              <input type="text" id="detail-url" class="form-input" readonly />
-              <button type="button" id="copy-url" class="copy-btn" title="Copy URL">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
+
+            <!-- Filters Section -->
+            <div class="control-section">
+              <h3>Filters & Effects</h3>
+              <div class="filter-grid">
+                <button type="button" class="filter-btn" data-filter="none">
+                  <span class="filter-preview"></span>
+                  <span>None</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="grayscale">
+                  <span class="filter-preview grayscale"></span>
+                  <span>Grayscale</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="sepia">
+                  <span class="filter-preview sepia"></span>
+                  <span>Sepia</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="vintage">
+                  <span class="filter-preview vintage"></span>
+                  <span>Vintage</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="cold">
+                  <span class="filter-preview cold"></span>
+                  <span>Cold</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="warm">
+                  <span class="filter-preview warm"></span>
+                  <span>Warm</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="dramatic">
+                  <span class="filter-preview dramatic"></span>
+                  <span>Dramatic</span>
+                </button>
+                <button type="button" class="filter-btn" data-filter="fade">
+                  <span class="filter-preview fade"></span>
+                  <span>Fade</span>
+                </button>
+              </div>
             </div>
-            
-            <div class="info-group">
-              <label>File Size:</label>
-              <span id="detail-size"></span>
+
+            <!-- Adjustments Section -->
+            <div class="control-section">
+              <h3>Adjustments</h3>
+              <div class="slider-group">
+                <label>Brightness</label>
+                <input type="range" id="adj-brightness" min="0" max="200" value="100" />
+                <span class="slider-value">100%</span>
+              </div>
+              <div class="slider-group">
+                <label>Contrast</label>
+                <input type="range" id="adj-contrast" min="0" max="200" value="100" />
+                <span class="slider-value">100%</span>
+              </div>
+              <div class="slider-group">
+                <label>Saturation</label>
+                <input type="range" id="adj-saturation" min="0" max="200" value="100" />
+                <span class="slider-value">100%</span>
+              </div>
+              <div class="slider-group">
+                <label>Blur</label>
+                <input type="range" id="adj-blur" min="0" max="20" value="0" />
+                <span class="slider-value">0px</span>
+              </div>
+              <div class="slider-group">
+                <label>Shadow</label>
+                <input type="range" id="adj-shadow" min="0" max="50" value="0" />
+                <span class="slider-value">0px</span>
+              </div>
+              <button type="button" id="reset-adjustments" class="btn btn-secondary btn-sm">Reset All</button>
             </div>
-            
-            <div class="info-group">
-              <label>Upload Date:</label>
-              <span id="detail-date"></span>
+
+            <!-- Actions -->
+            <div class="editor-actions">
+              <button type="button" id="save-copy" class="btn btn-secondary">Save as Copy</button>
+              <button type="button" id="save-replace" class="btn btn-primary">Save & Replace</button>
             </div>
-            
-            <div class="info-group">
-              <label>Dimensions:</label>
-              <span id="detail-dimensions">Loading...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Details Modal -->
+  <div id="details-modal" class="modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h2>Image Details</h2>
+        <button type="button" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="details-layout">
+          <div class="details-preview">
+            <img id="details-image" src="" alt="" />
+          </div>
+          <div class="details-info">
+            <div class="info-row">
+              <label>Filename</label>
+              <div class="info-value">
+                <input type="text" id="detail-filename" readonly />
+                <button type="button" class="copy-btn" data-copy="detail-filename">Copy</button>
+              </div>
             </div>
-            
-            <div class="detail-actions">
-              <button type="button" id="insert-image" class="btn btn-primary">
-                Insert into Editor
-              </button>
-              <button type="button" id="delete-image" class="btn btn-danger">
-                Delete Image
-              </button>
+            <div class="info-row">
+              <label>URL</label>
+              <div class="info-value">
+                <input type="text" id="detail-url" readonly />
+                <button type="button" class="copy-btn" data-copy="detail-url">Copy</button>
+              </div>
+            </div>
+            <div class="info-row">
+              <label>Dimensions</label>
+              <span id="detail-dimensions">-</span>
+            </div>
+            <div class="info-row">
+              <label>File Size</label>
+              <span id="detail-size">-</span>
+            </div>
+            <div class="info-row">
+              <label>Uploaded</label>
+              <span id="detail-date">-</span>
+            </div>
+            <div class="details-actions">
+              <button type="button" id="edit-image-btn" class="btn btn-primary">Edit Image</button>
+              <button type="button" id="delete-image-btn" class="btn btn-danger">Delete</button>
             </div>
           </div>
         </div>
@@ -185,47 +289,55 @@ if (!auth.authenticated) {
 <style>
   .media-library {
     padding: 2rem;
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
   }
 
   .media-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
+    align-items: center;
     margin-bottom: 2rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--color-border);
+    flex-wrap: wrap;
+    gap: 1rem;
   }
 
   .header-content h1 {
-    margin: 0 0 0.5rem;
-    font-size: 2rem;
-    font-weight: 700;
+    margin: 0;
+    font-size: 1.75rem;
   }
 
   .header-content p {
-    margin: 0;
+    margin: 0.25rem 0 0;
     color: var(--color-text-muted);
+    font-size: 0.875rem;
   }
 
   .btn {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
-    border-radius: var(--radius-md);
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 8px;
     font-size: 0.875rem;
     font-weight: 600;
-    border: none;
     cursor: pointer;
-    transition: all var(--transition-base);
-    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-sm {
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
   }
 
   .btn-primary {
     background: var(--color-primary);
     color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-dark, #2563eb);
   }
 
   .btn-secondary {
@@ -235,48 +347,45 @@ if (!auth.authenticated) {
   }
 
   .btn-danger {
-    background: var(--color-error);
+    background: #dc2626;
     color: white;
-  }
-
-  .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   .media-filters {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
     padding: 1rem;
     background: var(--color-surface);
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
+    flex-wrap: wrap;
   }
 
   .filter-group {
     display: flex;
-    gap: 1rem;
+    gap: 0.75rem;
     align-items: center;
+    flex-wrap: wrap;
   }
 
-  .search-input,
-  .sort-select {
+  .search-input, .sort-select {
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     background: var(--color-background);
     color: var(--color-text);
     font-size: 0.875rem;
   }
 
   .search-input {
-    min-width: 250px;
+    min-width: 200px;
   }
 
   .view-options {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.25rem;
   }
 
   .view-btn {
@@ -286,11 +395,10 @@ if (!auth.authenticated) {
     align-items: center;
     justify-content: center;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     background: var(--color-background);
-    color: var(--color-text);
+    color: var(--color-text-muted);
     cursor: pointer;
-    transition: all var(--transition-base);
   }
 
   .view-btn.active {
@@ -299,155 +407,150 @@ if (!auth.authenticated) {
     border-color: var(--color-primary);
   }
 
+  /* Media Grid - Fixed containment */
   .media-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.25rem;
   }
 
   .media-item {
+    position: relative;
     background: var(--color-surface);
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
     overflow: hidden;
-    transition: all var(--transition-base);
-    cursor: pointer;
     border: 2px solid transparent;
+    transition: all 0.2s;
+    cursor: pointer;
   }
 
   .media-item:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
     border-color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   }
 
-  .media-thumbnail {
+  .media-thumb {
     position: relative;
-    aspect-ratio: 16/9;
-    overflow: hidden;
+    width: 100%;
+    padding-top: 66.67%; /* 3:2 aspect ratio */
     background: var(--color-background);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    overflow: hidden;
   }
 
-  .media-thumbnail img {
+  .media-thumb img {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: transform var(--transition-base);
+    object-position: center;
     display: block;
-  }
-
-  .media-item:hover .media-thumbnail img {
-    transform: scale(1.05);
   }
 
   .media-overlay {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 0.5rem;
     opacity: 0;
-    transition: opacity var(--transition-base);
+    transition: opacity 0.2s;
   }
 
   .media-item:hover .media-overlay {
     opacity: 1;
   }
 
-  .media-actions {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .action-btn {
-    width: 36px;
-    height: 36px;
+  .overlay-btn {
+    width: 40px;
+    height: 40px;
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     background: white;
-    color: var(--color-text);
+    color: #333;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all var(--transition-base);
+    transition: all 0.2s;
   }
 
-  .action-btn:hover {
+  .overlay-btn:hover {
     background: var(--color-primary);
     color: white;
   }
 
-  .media-info {
-    padding: 1rem;
+  .media-meta {
+    padding: 0.875rem;
   }
 
   .media-name {
     font-weight: 600;
-    margin: 0 0 0.25rem;
     font-size: 0.875rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
   }
 
-  .media-meta {
+  .media-details {
     font-size: 0.75rem;
     color: var(--color-text-muted);
     display: flex;
     justify-content: space-between;
   }
 
+  /* List View */
   .media-list {
     background: var(--color-surface);
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
     overflow: hidden;
+  }
+
+  .hidden {
+    display: none !important;
   }
 
   .list-header {
     display: grid;
-    grid-template-columns: 80px 1fr 120px 150px 120px;
+    grid-template-columns: 80px 1fr 100px 140px 100px;
     gap: 1rem;
-    padding: 1rem;
+    padding: 0.875rem 1rem;
     background: var(--color-background);
     font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
     border-bottom: 1px solid var(--color-border);
-  }
-
-  .list-content {
-    max-height: 600px;
-    overflow-y: auto;
   }
 
   .list-item {
     display: grid;
-    grid-template-columns: 80px 1fr 120px 150px 120px;
+    grid-template-columns: 80px 1fr 100px 140px 100px;
     gap: 1rem;
-    padding: 1rem;
-    border-bottom: 1px solid var(--color-border);
+    padding: 0.75rem 1rem;
     align-items: center;
-    transition: background var(--transition-base);
+    border-bottom: 1px solid var(--color-border);
     cursor: pointer;
+    transition: background 0.2s;
   }
 
   .list-item:hover {
     background: var(--color-background);
   }
 
-  .list-thumbnail {
-    width: 60px;
-    height: 40px;
-    border-radius: var(--radius-sm);
+  .list-thumb {
+    width: 64px;
+    height: 44px;
+    border-radius: 6px;
     overflow: hidden;
+    background: var(--color-background);
   }
 
-  .list-thumbnail img {
+  .list-thumb img {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -459,17 +562,21 @@ if (!auth.authenticated) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 4rem 2rem;
+    padding: 4rem;
     color: var(--color-text-muted);
   }
 
-  .loading-state svg {
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
     margin-bottom: 1rem;
-    animation: spin 2s linear infinite;
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
   }
 
@@ -477,42 +584,45 @@ if (!auth.authenticated) {
   .modal {
     display: none;
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
     z-index: 1000;
-    padding: 2rem;
+    padding: 1rem;
+    overflow-y: auto;
   }
 
   .modal.active {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    padding-top: 5vh;
   }
 
   .modal-content {
     background: var(--color-surface);
-    border-radius: var(--radius-lg);
-    max-width: 600px;
+    border-radius: 16px;
     width: 100%;
+    max-width: 500px;
     max-height: 90vh;
     overflow: hidden;
     display: flex;
     flex-direction: column;
   }
 
-  .modal-large {
-    max-width: 900px;
+  .modal-lg {
+    max-width: 800px;
+  }
+
+  .modal-xl {
+    max-width: 1100px;
   }
 
   .modal-header {
-    padding: 1.5rem;
-    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--color-border);
   }
 
   .modal-header h2 {
@@ -523,14 +633,16 @@ if (!auth.authenticated) {
   .modal-close {
     width: 32px;
     height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     border: none;
     background: transparent;
     font-size: 1.5rem;
     color: var(--color-text-muted);
     cursor: pointer;
+    border-radius: 6px;
+  }
+
+  .modal-close:hover {
+    background: var(--color-background);
   }
 
   .modal-body {
@@ -538,130 +650,370 @@ if (!auth.authenticated) {
     overflow-y: auto;
   }
 
+  /* Upload Area */
   .upload-area {
     border: 2px dashed var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: 2rem;
+    border-radius: 12px;
+    padding: 3rem 2rem;
     text-align: center;
-    margin-bottom: 1.5rem;
-    transition: all var(--transition-base);
+    transition: all 0.2s;
   }
 
   .upload-area.drag-over {
     border-color: var(--color-primary);
-    background: var(--color-primary-alpha-10);
-  }
-
-  .upload-area input[type="file"] {
-    display: none;
+    background: rgba(59, 130, 246, 0.05);
   }
 
   .upload-label {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     color: var(--color-text-muted);
     cursor: pointer;
   }
 
-  .upload-label small {
-    font-size: 0.75rem;
-    opacity: 0.7;
+  .upload-label svg {
+    color: var(--color-primary);
   }
 
   .upload-progress {
     margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .progress-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.75rem;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: 0.5rem;
+    gap: 0.75rem;
+    padding: 0.625rem;
+    background: var(--color-background);
+    border-radius: 8px;
+    font-size: 0.8125rem;
   }
 
   .progress-bar {
     flex: 1;
     height: 6px;
-    background: var(--color-surface);
-    border-radius: var(--radius-full);
+    background: var(--color-border);
+    border-radius: 3px;
     overflow: hidden;
   }
 
   .progress-fill {
     height: 100%;
     background: var(--color-primary);
-    transition: width var(--transition-base);
+    transition: width 0.3s;
   }
 
-  .image-details {
+  /* Editor Layout */
+  .editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+  }
+
+  .editor-preview {
+    background: var(--color-background);
+    border-radius: 12px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .preview-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    max-height: 500px;
+    overflow: hidden;
+    background: repeating-conic-gradient(#e5e7eb 0% 25%, #fff 0% 50%) 50% / 20px 20px;
+    border-radius: 8px;
+  }
+
+  .preview-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    transition: filter 0.3s;
+  }
+
+  .preview-info {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+  }
+
+  .editor-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .control-section {
+    background: var(--color-background);
+    border-radius: 12px;
+    padding: 1rem;
+  }
+
+  .control-section h3 {
+    margin: 0 0 0.875rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+
+  .size-inputs {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .input-group label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .input-group input {
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    width: 100%;
+  }
+
+  .input-group span {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .lock-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+
+  .lock-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .preset-sizes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .preset-btn {
+    padding: 0.375rem 0.625rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  /* Filter Grid */
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+  }
+
+  .filter-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--color-primary);
+  }
+
+  .filter-btn span:last-child {
+    font-size: 0.6875rem;
+  }
+
+  .filter-preview {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .filter-preview.grayscale {
+    filter: grayscale(100%);
+  }
+
+  .filter-preview.sepia {
+    filter: sepia(100%);
+  }
+
+  .filter-preview.vintage {
+    filter: sepia(40%) contrast(90%) brightness(90%);
+  }
+
+  .filter-preview.cold {
+    filter: saturate(80%) hue-rotate(180deg);
+  }
+
+  .filter-preview.warm {
+    filter: saturate(120%) sepia(20%);
+  }
+
+  .filter-preview.dramatic {
+    filter: contrast(150%) saturate(120%);
+  }
+
+  .filter-preview.fade {
+    filter: contrast(80%) brightness(110%) saturate(80%);
+  }
+
+  /* Sliders */
+  .slider-group {
+    display: grid;
+    grid-template-columns: 80px 1fr 50px;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .slider-group label {
+    font-size: 0.8125rem;
+  }
+
+  .slider-group input[type="range"] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--color-border);
+    appearance: none;
+  }
+
+  .slider-group input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+  }
+
+  .slider-value {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-align: right;
+  }
+
+  .editor-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+  }
+
+  .editor-actions .btn {
+    flex: 1;
+  }
+
+  /* Details Layout */
+  .details-layout {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
-  .image-preview-large {
-    border-radius: var(--radius-lg);
+  .details-preview {
+    border-radius: 12px;
     overflow: hidden;
     background: var(--color-background);
   }
 
-  .image-preview-large img {
+  .details-preview img {
     width: 100%;
     height: auto;
     display: block;
   }
 
-  .image-info {
+  .details-info {
     display: flex;
     flex-direction: column;
     gap: 1rem;
   }
 
-  .info-group {
+  .info-row {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.375rem;
   }
 
-  .info-group label {
+  .info-row label {
+    font-size: 0.75rem;
     font-weight: 600;
-    font-size: 0.875rem;
-    color: var(--color-text);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
   }
 
-  .info-group > div {
+  .info-value {
     display: flex;
     gap: 0.5rem;
-    align-items: center;
   }
 
-  .form-input {
+  .info-value input {
     flex: 1;
     padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: 6px;
     background: var(--color-background);
     color: var(--color-text);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
   }
 
   .copy-btn {
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0.5rem 0.75rem;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: 6px;
     background: var(--color-background);
     color: var(--color-text);
+    font-size: 0.75rem;
     cursor: pointer;
-    transition: all var(--transition-base);
   }
 
   .copy-btn:hover {
@@ -670,75 +1022,63 @@ if (!auth.authenticated) {
     border-color: var(--color-primary);
   }
 
-  .detail-actions {
+  .details-actions {
     display: flex;
-    gap: 1rem;
-    margin-top: 1rem;
+    gap: 0.75rem;
+    margin-top: auto;
+    padding-top: 1rem;
   }
 
-  @media (max-width: 768px) {
-    .media-header {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 1rem;
-    }
+  .details-actions .btn {
+    flex: 1;
+  }
 
-    .media-filters {
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .filter-group {
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    .search-input {
-      min-width: 200px;
-    }
-
-    .media-grid {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    }
-
-    .list-header,
-    .list-item {
-      grid-template-columns: 60px 1fr 80px;
-      gap: 0.5rem;
-    }
-
-    .col-size,
-    .col-date {
-      display: none;
-    }
-
-    .image-details {
+  /* Responsive */
+  @media (max-width: 900px) {
+    .editor-layout {
       grid-template-columns: 1fr;
+    }
+
+    .details-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .filter-grid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .media-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+
+    .list-header, .list-item {
+      grid-template-columns: 60px 1fr 80px;
+    }
+
+    .col-size, .col-date {
+      display: none;
     }
   }
 </style>
 
 <script>
-  // State management
+  // State
   let images = [];
   let filteredImages = [];
-  let currentView = 'grid';
   let selectedImage = null;
+  let originalDimensions = { width: 0, height: 0 };
+  let lockAspectRatio = true;
+  let currentFilter = 'none';
 
-  // DOM elements
-  const uploadBtn = document.getElementById('upload-btn');
-  const uploadModal = document.getElementById('upload-modal');
-  const detailsModal = document.getElementById('details-modal');
-  const fileInput = document.getElementById('file-input');
-  const uploadArea = document.getElementById('upload-area');
-  const uploadProgress = document.getElementById('upload-progress');
+  // DOM
   const mediaGrid = document.getElementById('media-grid');
   const mediaList = document.getElementById('media-list');
+  const listContent = document.getElementById('list-content');
   const searchInput = document.getElementById('search-input');
   const sortSelect = document.getElementById('sort-select');
-  const refreshBtn = document.getElementById('refresh-btn');
-  const gridViewBtn = document.getElementById('grid-view');
-  const listViewBtn = document.getElementById('list-view');
 
   // Initialize
   document.addEventListener('DOMContentLoaded', () => {
@@ -748,379 +1088,460 @@ if (!auth.authenticated) {
 
   function setupEventListeners() {
     // Upload modal
-    uploadBtn?.addEventListener('click', () => {
-      uploadModal.classList.add('active');
+    document.getElementById('upload-btn')?.addEventListener('click', () => {
+      document.getElementById('upload-modal')?.classList.add('active');
     });
 
-    // Modal close buttons
+    // Close modals
     document.querySelectorAll('.modal-close').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.target.closest('.modal').classList.remove('active');
-      });
+      btn.addEventListener('click', () => btn.closest('.modal')?.classList.remove('active'));
     });
 
-    // Click outside modal to close
     document.querySelectorAll('.modal').forEach(modal => {
       modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          modal.classList.remove('active');
-        }
+        if (e.target === modal) modal.classList.remove('active');
       });
     });
 
     // File upload
-    fileInput?.addEventListener('change', handleFileUpload);
+    const fileInput = document.getElementById('file-input');
+    const uploadArea = document.getElementById('upload-area');
 
-    // Drag and drop
+    fileInput?.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length) uploadFiles(files);
+      e.target.value = '';
+    });
+
     uploadArea?.addEventListener('dragover', (e) => {
       e.preventDefault();
       uploadArea.classList.add('drag-over');
     });
 
-    uploadArea?.addEventListener('dragleave', (e) => {
-      e.preventDefault();
+    uploadArea?.addEventListener('dragleave', () => {
       uploadArea.classList.remove('drag-over');
     });
 
     uploadArea?.addEventListener('drop', (e) => {
       e.preventDefault();
       uploadArea.classList.remove('drag-over');
-      const files = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('image/'));
-      if (files.length > 0) {
-        uploadFiles(files);
-      }
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length) uploadFiles(files);
     });
 
-    // Search and filters
-    searchInput?.addEventListener('input', filterImages);
-    sortSelect?.addEventListener('change', filterImages);
-    refreshBtn?.addEventListener('click', loadImages);
+    // Filters
+    searchInput?.addEventListener('input', filterAndRender);
+    sortSelect?.addEventListener('change', filterAndRender);
+    document.getElementById('refresh-btn')?.addEventListener('click', loadImages);
 
     // View toggle
-    gridViewBtn?.addEventListener('click', () => setView('grid'));
-    listViewBtn?.addEventListener('click', () => setView('list'));
+    document.getElementById('grid-view')?.addEventListener('click', () => setView('grid'));
+    document.getElementById('list-view')?.addEventListener('click', () => setView('list'));
 
-    // Copy buttons in details modal
-    document.getElementById('copy-filename')?.addEventListener('click', () => {
-      copyToClipboard(document.getElementById('detail-filename').value);
+    // Editor controls
+    setupEditorControls();
+
+    // Copy buttons
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const inputId = btn.dataset.copy;
+        const input = document.getElementById(inputId);
+        if (input) {
+          navigator.clipboard.writeText(input.value);
+          btn.textContent = 'Copied!';
+          setTimeout(() => btn.textContent = 'Copy', 1500);
+        }
+      });
     });
 
-    document.getElementById('copy-url')?.addEventListener('click', () => {
-      copyToClipboard(document.getElementById('detail-url').value);
+    // Details modal actions
+    document.getElementById('edit-image-btn')?.addEventListener('click', () => {
+      document.getElementById('details-modal')?.classList.remove('active');
+      openEditor(selectedImage);
     });
 
-    // Delete image
-    document.getElementById('delete-image')?.addEventListener('click', deleteSelectedImage);
+    document.getElementById('delete-image-btn')?.addEventListener('click', deleteSelectedImage);
+  }
 
-    // Insert image
-    document.getElementById('insert-image')?.addEventListener('click', insertSelectedImage);
+  function setupEditorControls() {
+    // Lock aspect ratio
+    const lockBtn = document.getElementById('lock-ratio');
+    lockBtn?.addEventListener('click', () => {
+      lockAspectRatio = !lockAspectRatio;
+      lockBtn.classList.toggle('active', lockAspectRatio);
+    });
+
+    // Resize inputs
+    const widthInput = document.getElementById('resize-width');
+    const heightInput = document.getElementById('resize-height');
+
+    widthInput?.addEventListener('input', () => {
+      if (lockAspectRatio && originalDimensions.width) {
+        const ratio = originalDimensions.height / originalDimensions.width;
+        heightInput.value = Math.round(widthInput.value * ratio);
+      }
+      updatePreviewSize();
+    });
+
+    heightInput?.addEventListener('input', () => {
+      if (lockAspectRatio && originalDimensions.height) {
+        const ratio = originalDimensions.width / originalDimensions.height;
+        widthInput.value = Math.round(heightInput.value * ratio);
+      }
+      updatePreviewSize();
+    });
+
+    // Preset sizes
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const [w, h] = btn.dataset.size.split('x').map(Number);
+        widthInput.value = w;
+        heightInput.value = h;
+        updatePreviewSize();
+      });
+    });
+
+    // Filter buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        applyFilters();
+      });
+    });
+
+    // Adjustment sliders
+    const sliders = ['brightness', 'contrast', 'saturation', 'blur', 'shadow'];
+    sliders.forEach(name => {
+      const slider = document.getElementById(`adj-${name}`);
+      slider?.addEventListener('input', () => {
+        const valueSpan = slider.parentElement.querySelector('.slider-value');
+        if (name === 'blur' || name === 'shadow') {
+          valueSpan.textContent = `${slider.value}px`;
+        } else {
+          valueSpan.textContent = `${slider.value}%`;
+        }
+        applyFilters();
+      });
+    });
+
+    // Reset
+    document.getElementById('reset-adjustments')?.addEventListener('click', resetAdjustments);
+
+    // Save
+    document.getElementById('save-copy')?.addEventListener('click', () => saveImage(false));
+    document.getElementById('save-replace')?.addEventListener('click', () => saveImage(true));
   }
 
   async function loadImages() {
     try {
-      mediaGrid.innerHTML = '<div class="loading-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><p>Loading images...</p></div>';
-      
+      mediaGrid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading images...</p></div>';
+
       const response = await fetch('/admin/api/list-images.json');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
       const data = await response.json();
-      
+
       if (data.success) {
         images = data.images || [];
-        filteredImages = [...images];
-        filterImages(); // Apply current filters and render
+        filterAndRender();
       } else {
-        throw new Error(data.error || 'Failed to load images');
+        throw new Error(data.error);
       }
-      
+
       if (images.length === 0) {
-        mediaGrid.innerHTML = '<div class="loading-state"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg><p>No images found. Upload some images to get started!</p></div>';
+        mediaGrid.innerHTML = '<div class="loading-state"><p>No images yet. Upload some!</p></div>';
       }
-      
     } catch (error) {
       console.error('Error loading images:', error);
-      mediaGrid.innerHTML = '<div class="loading-state"><p>Error loading images. Please try again.</p></div>';
+      mediaGrid.innerHTML = '<div class="loading-state"><p>Error loading images</p></div>';
     }
-  }
-
-  function handleFileUpload(e) {
-    const files = Array.from(e.target.files);
-    if (files.length > 0) {
-      uploadFiles(files);
-    }
-    e.target.value = ''; // Clear input
   }
 
   async function uploadFiles(files) {
-    uploadProgress.innerHTML = '';
-    
+    const progress = document.getElementById('upload-progress');
+    progress.innerHTML = '';
+
     for (const file of files) {
-      await uploadSingleFile(file);
-    }
-    
-    // Refresh the image list after uploads
-    setTimeout(() => {
-      loadImages();
-    }, 1000);
-  }
+      const item = document.createElement('div');
+      item.className = 'progress-item';
+      item.innerHTML = `
+        <span>${file.name}</span>
+        <div class="progress-bar"><div class="progress-fill" style="width: 0"></div></div>
+        <span class="status">Uploading...</span>
+      `;
+      progress.appendChild(item);
 
-  async function uploadSingleFile(file) {
-    const progressItem = document.createElement('div');
-    progressItem.className = 'progress-item';
-    progressItem.innerHTML = `
-      <span>${file.name}</span>
-      <div class="progress-bar">
-        <div class="progress-fill" style="width: 0%"></div>
-      </div>
-      <span class="progress-status">Uploading...</span>
-    `;
-    uploadProgress.appendChild(progressItem);
-    
-    const progressFill = progressItem.querySelector('.progress-fill');
-    const progressStatus = progressItem.querySelector('.progress-status');
-    
-    const formData = new FormData();
-    formData.append('image', file);
-    
-    try {
-      progressFill.style.width = '30%';
-      
-      const response = await fetch('/admin/api/upload-image.json', {
-        method: 'POST',
-        body: formData
-      });
-      
-      progressFill.style.width = '90%';
-      
-      if (response.ok) {
-        const data = await response.json();
-        progressFill.style.width = '100%';
-        progressStatus.textContent = 'Complete';
-        progressStatus.style.color = 'var(--color-success)';
-        
-        setTimeout(() => {
-          progressItem.remove();
-        }, 2000);
-      } else {
-        const errorData = await response.json();
-        progressStatus.textContent = `Error: ${errorData.error}`;
-        progressStatus.style.color = 'var(--color-error)';
+      const fill = item.querySelector('.progress-fill');
+      const status = item.querySelector('.status');
+
+      try {
+        fill.style.width = '30%';
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const res = await fetch('/admin/api/upload-image.json', { method: 'POST', body: formData });
+        fill.style.width = '100%';
+
+        if (res.ok) {
+          status.textContent = 'Done';
+          status.style.color = '#22c55e';
+        } else {
+          const err = await res.json();
+          status.textContent = err.error || 'Error';
+          status.style.color = '#ef4444';
+        }
+      } catch (e) {
+        status.textContent = 'Error';
+        status.style.color = '#ef4444';
       }
-    } catch (error) {
-      progressStatus.textContent = `Error: ${error.message}`;
-      progressStatus.style.color = 'var(--color-error)';
     }
+
+    setTimeout(loadImages, 1000);
   }
 
-  function filterImages() {
-    const searchTerm = searchInput.value.toLowerCase();
-    const sortBy = sortSelect.value;
-    
-    filteredImages = images.filter(image => 
-      image.name.toLowerCase().includes(searchTerm)
-    );
-    
-    // Sort images
+  function filterAndRender() {
+    const term = searchInput?.value.toLowerCase() || '';
+    const sort = sortSelect?.value || 'newest';
+
+    filteredImages = images.filter(img => img.name.toLowerCase().includes(term));
+
     filteredImages.sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.uploadDate) - new Date(a.uploadDate);
-        case 'oldest':
-          return new Date(a.uploadDate) - new Date(b.uploadDate);
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'size':
-          return b.size - a.size;
-        default:
-          return 0;
+      switch (sort) {
+        case 'newest': return new Date(b.uploadDate) - new Date(a.uploadDate);
+        case 'oldest': return new Date(a.uploadDate) - new Date(b.uploadDate);
+        case 'name': return a.name.localeCompare(b.name);
+        case 'size': return b.size - a.size;
+        default: return 0;
       }
     });
-    
-    renderImages();
+
+    renderGrid();
+    renderList();
   }
 
-  function renderImages() {
-    if (currentView === 'grid') {
-      renderGridView();
-    } else {
-      renderListView();
-    }
-  }
-
-  function renderGridView() {
-    if (filteredImages.length === 0) {
-      mediaGrid.innerHTML = '<div class="loading-state"><p>No images found.</p></div>';
+  function renderGrid() {
+    if (!filteredImages.length) {
+      mediaGrid.innerHTML = '<div class="loading-state"><p>No images found</p></div>';
       return;
     }
-    
-    mediaGrid.innerHTML = filteredImages.map(image => `
-      <div class="media-item" onclick="showImageDetails('${image.id}')">
-        <div class="media-thumbnail">
-          <img src="${image.url}" alt="${image.name}" loading="lazy" />
+
+    mediaGrid.innerHTML = filteredImages.map(img => `
+      <div class="media-item" data-id="${img.id}">
+        <div class="media-thumb">
+          <img src="${img.url}" alt="${img.name}" loading="lazy" />
           <div class="media-overlay">
-            <div class="media-actions">
-              <button class="action-btn" onclick="event.stopPropagation(); copyToClipboard('${image.url}')" title="Copy URL">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                </svg>
-              </button>
-              <button class="action-btn" onclick="event.stopPropagation(); deleteImage('${image.id}')" title="Delete">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>
-            </div>
+            <button class="overlay-btn" data-action="edit" title="Edit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="overlay-btn" data-action="copy" title="Copy URL">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
           </div>
         </div>
-        <div class="media-info">
-          <div class="media-name">${image.name}</div>
-          <div class="media-meta">
-            <span>${formatFileSize(image.size)}</span>
-            <span>${formatDate(image.uploadDate)}</span>
+        <div class="media-meta">
+          <div class="media-name">${img.name}</div>
+          <div class="media-details">
+            <span>${formatSize(img.size)}</span>
+            <span>${formatDate(img.uploadDate)}</span>
           </div>
         </div>
       </div>
     `).join('');
+
+    // Event delegation
+    mediaGrid.addEventListener('click', handleGridClick);
   }
 
-  function renderListView() {
-    const listContent = document.getElementById('list-content');
-    
-    if (filteredImages.length === 0) {
-      listContent.innerHTML = '<div class="loading-state"><p>No images found.</p></div>';
+  function handleGridClick(e) {
+    const item = e.target.closest('.media-item');
+    if (!item) return;
+
+    const id = item.dataset.id;
+    const image = images.find(i => i.id === id);
+    if (!image) return;
+
+    const action = e.target.closest('[data-action]')?.dataset.action;
+
+    if (action === 'edit') {
+      e.stopPropagation();
+      openEditor(image);
+    } else if (action === 'copy') {
+      e.stopPropagation();
+      navigator.clipboard.writeText(image.url);
+    } else {
+      showDetails(image);
+    }
+  }
+
+  function renderList() {
+    if (!filteredImages.length) {
+      listContent.innerHTML = '<div class="loading-state"><p>No images found</p></div>';
       return;
     }
-    
-    listContent.innerHTML = filteredImages.map(image => `
-      <div class="list-item" onclick="showImageDetails('${image.id}')">
-        <div class="list-thumbnail">
-          <img src="${image.url}" alt="${image.name}" loading="lazy" />
+
+    listContent.innerHTML = filteredImages.map(img => `
+      <div class="list-item" data-id="${img.id}">
+        <div class="list-thumb">
+          <img src="${img.url}" alt="${img.name}" loading="lazy" />
         </div>
-        <div class="media-name">${image.name}</div>
-        <div class="col-size">${formatFileSize(image.size)}</div>
-        <div class="col-date">${formatDate(image.uploadDate)}</div>
+        <div class="media-name">${img.name}</div>
+        <div class="col-size">${formatSize(img.size)}</div>
+        <div class="col-date">${formatDate(img.uploadDate)}</div>
         <div class="col-actions">
-          <button class="action-btn" onclick="event.stopPropagation(); copyToClipboard('${image.url}')" title="Copy URL">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-          </button>
+          <button class="overlay-btn" data-action="edit" title="Edit">Edit</button>
         </div>
       </div>
     `).join('');
   }
 
   function setView(view) {
-    currentView = view;
-    
-    // Update button states
-    gridViewBtn.classList.toggle('active', view === 'grid');
-    listViewBtn.classList.toggle('active', view === 'list');
-    
-    // Show/hide views
-    mediaGrid.style.display = view === 'grid' ? 'grid' : 'none';
-    mediaList.style.display = view === 'list' ? 'block' : 'none';
-    
-    renderImages();
+    document.getElementById('grid-view')?.classList.toggle('active', view === 'grid');
+    document.getElementById('list-view')?.classList.toggle('active', view === 'list');
+    mediaGrid.classList.toggle('hidden', view !== 'grid');
+    mediaList.classList.toggle('hidden', view !== 'list');
   }
 
-  function showImageDetails(imageId) {
-    selectedImage = images.find(img => img.id === imageId);
-    if (!selectedImage) return;
-    
-    // Populate details modal
-    document.getElementById('preview-image').src = selectedImage.url;
-    document.getElementById('detail-filename').value = selectedImage.filename;
-    document.getElementById('detail-url').value = selectedImage.url;
-    document.getElementById('detail-size').textContent = formatFileSize(selectedImage.size);
-    document.getElementById('detail-date').textContent = formatDate(selectedImage.uploadDate);
-    
-    // Load image dimensions
+  function showDetails(image) {
+    selectedImage = image;
+    document.getElementById('details-image').src = image.url;
+    document.getElementById('detail-filename').value = image.filename || image.name;
+    document.getElementById('detail-url').value = image.url;
+    document.getElementById('detail-size').textContent = formatSize(image.size);
+    document.getElementById('detail-date').textContent = formatDate(image.uploadDate);
+
     const img = new Image();
     img.onload = () => {
       document.getElementById('detail-dimensions').textContent = `${img.width} × ${img.height} px`;
     };
-    img.src = selectedImage.url;
-    
-    detailsModal.classList.add('active');
+    img.src = image.url;
+
+    document.getElementById('details-modal')?.classList.add('active');
+  }
+
+  function openEditor(image) {
+    selectedImage = image;
+    const editorImg = document.getElementById('editor-image');
+    editorImg.src = image.url;
+    editorImg.style.filter = '';
+
+    const img = new Image();
+    img.onload = () => {
+      originalDimensions = { width: img.width, height: img.height };
+      document.getElementById('resize-width').value = img.width;
+      document.getElementById('resize-height').value = img.height;
+      document.getElementById('editor-dimensions').textContent = `${img.width} × ${img.height}`;
+      document.getElementById('editor-filesize').textContent = formatSize(image.size);
+    };
+    img.src = image.url;
+
+    resetAdjustments();
+    document.getElementById('editor-modal')?.classList.add('active');
+  }
+
+  function applyFilters() {
+    const editorImg = document.getElementById('editor-image');
+    const brightness = document.getElementById('adj-brightness')?.value || 100;
+    const contrast = document.getElementById('adj-contrast')?.value || 100;
+    const saturation = document.getElementById('adj-saturation')?.value || 100;
+    const blur = document.getElementById('adj-blur')?.value || 0;
+    const shadow = document.getElementById('adj-shadow')?.value || 0;
+
+    let filterStr = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`;
+
+    switch (currentFilter) {
+      case 'grayscale': filterStr += ' grayscale(100%)'; break;
+      case 'sepia': filterStr += ' sepia(100%)'; break;
+      case 'vintage': filterStr += ' sepia(40%) contrast(90%)'; break;
+      case 'cold': filterStr += ' saturate(80%) hue-rotate(180deg)'; break;
+      case 'warm': filterStr += ' saturate(120%) sepia(20%)'; break;
+      case 'dramatic': filterStr += ' contrast(130%) saturate(120%)'; break;
+      case 'fade': filterStr += ' contrast(85%) brightness(105%) saturate(85%)'; break;
+    }
+
+    editorImg.style.filter = filterStr;
+
+    if (shadow > 0) {
+      editorImg.style.boxShadow = `0 ${shadow/2}px ${shadow}px rgba(0,0,0,0.3)`;
+    } else {
+      editorImg.style.boxShadow = '';
+    }
+  }
+
+  function updatePreviewSize() {
+    const w = document.getElementById('resize-width')?.value;
+    const h = document.getElementById('resize-height')?.value;
+    document.getElementById('editor-dimensions').textContent = `${w} × ${h}`;
+  }
+
+  function resetAdjustments() {
+    const sliders = ['brightness', 'contrast', 'saturation'];
+    sliders.forEach(name => {
+      const slider = document.getElementById(`adj-${name}`);
+      if (slider) {
+        slider.value = 100;
+        slider.parentElement.querySelector('.slider-value').textContent = '100%';
+      }
+    });
+
+    ['blur', 'shadow'].forEach(name => {
+      const slider = document.getElementById(`adj-${name}`);
+      if (slider) {
+        slider.value = 0;
+        slider.parentElement.querySelector('.slider-value').textContent = '0px';
+      }
+    });
+
+    currentFilter = 'none';
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.filter-btn[data-filter="none"]')?.classList.add('active');
+
+    applyFilters();
+  }
+
+  async function saveImage(replace) {
+    alert(replace ? 'Save & Replace coming soon!' : 'Save as Copy coming soon!');
   }
 
   async function deleteSelectedImage() {
-    if (!selectedImage) return;
-    
-    if (!confirm(`Are you sure you want to delete "${selectedImage.name}"? This action cannot be undone.`)) {
-      return;
-    }
-    
+    if (!selectedImage || !confirm(`Delete "${selectedImage.name}"?`)) return;
+
     try {
-      const response = await fetch('/admin/api/delete-image.json', {
+      const res = await fetch('/admin/api/delete-image.json', {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          filename: selectedImage.filename
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename: selectedImage.filename || selectedImage.name })
       });
-      
-      if (response.ok) {
-        detailsModal.classList.remove('active');
-        loadImages(); // Refresh the list
-        alert('Image deleted successfully');
+
+      if (res.ok) {
+        document.getElementById('details-modal')?.classList.remove('active');
+        loadImages();
       } else {
-        const errorData = await response.json();
-        alert(`Error deleting image: ${errorData.error}`);
+        const err = await res.json();
+        alert(err.error || 'Error deleting');
       }
-    } catch (error) {
-      alert(`Error deleting image: ${error.message}`);
+    } catch (e) {
+      alert('Error deleting image');
     }
   }
 
-  function insertSelectedImage() {
-    if (!selectedImage) return;
-    
-    // This would be used to insert into an editor if we're in that context
-    // For now, just copy the URL
-    copyToClipboard(selectedImage.url);
-    detailsModal.classList.remove('active');
-    alert('Image URL copied to clipboard');
-  }
-
-  function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).then(() => {
-      // Show a temporary success message
-      const btn = event.target.closest('button');
-      const originalContent = btn.innerHTML;
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-      setTimeout(() => {
-        btn.innerHTML = originalContent;
-      }, 1000);
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      alert('Failed to copy to clipboard');
-    });
-  }
-
-  function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
+  function formatSize(bytes) {
+    if (!bytes) return '0 B';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
   }
 
-  function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+  function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric'
     });
   }
 </script>
