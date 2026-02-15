@@ -1,0 +1,584 @@
+---
+// Text layout templates with columns and alignment options
+---
+
+<div id="text-layouts" class="text-layouts hidden">
+  <h3>Insert Text Layout</h3>
+  
+  <div class="layout-options">
+    <!-- Column Layouts -->
+    <div class="layout-section">
+      <h4>Column Layouts</h4>
+      <div class="layout-grid">
+        <button type="button" class="layout-btn" data-layout="two-columns">
+          <div class="layout-preview">
+            <div class="col"></div>
+            <div class="col"></div>
+          </div>
+          <span>2 Columns</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="three-columns">
+          <div class="layout-preview three">
+            <div class="col"></div>
+            <div class="col"></div>
+            <div class="col"></div>
+          </div>
+          <span>3 Columns</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="four-columns">
+          <div class="layout-preview four">
+            <div class="col"></div>
+            <div class="col"></div>
+            <div class="col"></div>
+            <div class="col"></div>
+          </div>
+          <span>4 Columns</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="sidebar-left">
+          <div class="layout-preview sidebar">
+            <div class="col narrow"></div>
+            <div class="col wide"></div>
+          </div>
+          <span>Sidebar Left</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="sidebar-right">
+          <div class="layout-preview sidebar">
+            <div class="col wide"></div>
+            <div class="col narrow"></div>
+          </div>
+          <span>Sidebar Right</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Row Layouts -->
+    <div class="layout-section">
+      <h4>Row Layouts</h4>
+      <div class="layout-grid">
+        <button type="button" class="layout-btn" data-layout="card-row">
+          <div class="layout-preview card">
+            <div class="card-item"></div>
+          </div>
+          <span>Card Row</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="feature-row">
+          <div class="layout-preview feature">
+            <div class="feature-icon"></div>
+            <div class="feature-text"></div>
+          </div>
+          <span>Feature Row</span>
+        </button>
+        
+        <button type="button" class="layout-btn" data-layout="highlight-box">
+          <div class="layout-preview highlight">
+            <div class="highlight-content"></div>
+          </div>
+          <span>Highlight Box</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Text Alignment Toolbar -->
+<div id="text-alignment-toolbar" class="alignment-toolbar hidden">
+  <div class="toolbar-group">
+    <button type="button" class="align-btn" data-align="left" title="Align Left">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="15" y2="12"/>
+        <line x1="3" y1="18" x2="18" y2="18"/>
+      </svg>
+    </button>
+    <button type="button" class="align-btn" data-align="center" title="Align Center">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="6" y1="12" x2="18" y2="12"/>
+        <line x1="5" y1="18" x2="19" y2="18"/>
+      </svg>
+    </button>
+    <button type="button" class="align-btn" data-align="right" title="Align Right">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="9" y1="12" x2="21" y2="12"/>
+        <line x1="6" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <button type="button" class="align-btn" data-align="justify" title="Justify">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <div class="toolbar-separator"></div>
+  <div class="toolbar-group">
+    <button type="button" class="indent-btn" data-indent="decrease" title="Decrease Indent">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="9" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+        <polyline points="7 16 3 12 7 8"/>
+      </svg>
+    </button>
+    <button type="button" class="indent-btn" data-indent="increase" title="Increase Indent">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="9" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+        <polyline points="5 8 9 12 5 16"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<style>
+  .text-layouts {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    box-shadow: var(--shadow-xl);
+    z-index: 2000;
+    max-width: 900px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .text-layouts.hidden {
+    display: none;
+  }
+
+  .text-layouts h3 {
+    margin-bottom: 1.5rem;
+    color: var(--color-text);
+    font-size: 1.25rem;
+  }
+
+  .layout-options {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .layout-section h4 {
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .layout-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .layout-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-background);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .layout-btn:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-alpha-10);
+  }
+
+  .layout-preview {
+    width: 100%;
+    height: 60px;
+    display: flex;
+    gap: 4px;
+    padding: 4px;
+    background: white;
+    border-radius: 4px;
+  }
+
+  .layout-preview .col {
+    flex: 1;
+    background: #e5e7eb;
+    border-radius: 2px;
+  }
+
+  .layout-preview .col.narrow {
+    flex: 0.3;
+  }
+
+  .layout-preview .col.wide {
+    flex: 0.7;
+  }
+
+  .layout-preview.three {
+    gap: 3px;
+  }
+
+  .layout-preview.four {
+    gap: 2px;
+  }
+
+  .layout-preview.card {
+    padding: 8px;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+  }
+
+  .card-item {
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+
+  .layout-preview.feature {
+    align-items: center;
+    padding: 8px;
+  }
+
+  .feature-icon {
+    width: 20px;
+    height: 20px;
+    background: #6366f1;
+    border-radius: 4px;
+  }
+
+  .feature-text {
+    flex: 1;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 2px;
+    margin-left: 8px;
+  }
+
+  .layout-preview.highlight {
+    padding: 8px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+
+  .highlight-content {
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 4px;
+    opacity: 0.9;
+  }
+
+  .layout-btn span {
+    font-size: 0.813rem;
+    color: var(--color-text-muted);
+  }
+
+  /* Alignment Toolbar */
+  .alignment-toolbar {
+    position: fixed;
+    top: auto;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .alignment-toolbar.hidden {
+    display: none;
+  }
+
+  .toolbar-group {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .toolbar-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--color-border);
+  }
+
+  .align-btn,
+  .indent-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .align-btn:hover,
+  .indent-btn:hover {
+    background: var(--color-primary-alpha-10);
+    border-color: var(--color-primary);
+  }
+
+  .align-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+</style>
+
+<script>
+  // Text layout templates
+  const textLayouts = {
+    'two-columns': `
+      <div class="text-columns two-cols" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0;">
+        <div class="column" style="padding: 1rem;">
+          <h3>Column 1 Title</h3>
+          <p>Add your content for the first column here. You can include text, lists, or any other content.</p>
+        </div>
+        <div class="column" style="padding: 1rem;">
+          <h3>Column 2 Title</h3>
+          <p>Add your content for the second column here. This creates a balanced two-column layout.</p>
+        </div>
+      </div>
+      <p><br></p>
+    `,
+    
+    'three-columns': `
+      <div class="text-columns three-cols" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 2rem 0;">
+        <div class="column" style="padding: 1rem;">
+          <h4>Column 1</h4>
+          <p>Content for the first column.</p>
+        </div>
+        <div class="column" style="padding: 1rem;">
+          <h4>Column 2</h4>
+          <p>Content for the second column.</p>
+        </div>
+        <div class="column" style="padding: 1rem;">
+          <h4>Column 3</h4>
+          <p>Content for the third column.</p>
+        </div>
+      </div>
+      <p><br></p>
+    `,
+    
+    'four-columns': `
+      <div class="text-columns four-cols" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 2rem 0;">
+        <div class="column" style="padding: 0.75rem;">
+          <h5>Item 1</h5>
+          <p style="font-size: 0.875rem;">Brief content.</p>
+        </div>
+        <div class="column" style="padding: 0.75rem;">
+          <h5>Item 2</h5>
+          <p style="font-size: 0.875rem;">Brief content.</p>
+        </div>
+        <div class="column" style="padding: 0.75rem;">
+          <h5>Item 3</h5>
+          <p style="font-size: 0.875rem;">Brief content.</p>
+        </div>
+        <div class="column" style="padding: 0.75rem;">
+          <h5>Item 4</h5>
+          <p style="font-size: 0.875rem;">Brief content.</p>
+        </div>
+      </div>
+      <p><br></p>
+    `,
+    
+    'sidebar-left': `
+      <div class="text-columns sidebar-layout" style="display: grid; grid-template-columns: 300px 1fr; gap: 2rem; margin: 2rem 0;">
+        <aside style="padding: 1.5rem; background: #f7f8fa; border-radius: 8px;">
+          <h4>Sidebar</h4>
+          <p>Sidebar content, navigation, or related information.</p>
+        </aside>
+        <main style="padding: 1rem;">
+          <h3>Main Content</h3>
+          <p>Your main content goes here. This layout is perfect for articles with supplementary information.</p>
+        </main>
+      </div>
+      <p><br></p>
+    `,
+    
+    'sidebar-right': `
+      <div class="text-columns sidebar-layout" style="display: grid; grid-template-columns: 1fr 300px; gap: 2rem; margin: 2rem 0;">
+        <main style="padding: 1rem;">
+          <h3>Main Content</h3>
+          <p>Your main content goes here. This layout places the sidebar on the right side.</p>
+        </main>
+        <aside style="padding: 1.5rem; background: #f7f8fa; border-radius: 8px;">
+          <h4>Sidebar</h4>
+          <p>Additional information, links, or related content.</p>
+        </aside>
+      </div>
+      <p><br></p>
+    `,
+    
+    'card-row': `
+      <div class="card-row" style="padding: 1.5rem; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; margin: 2rem 0; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3 style="margin-bottom: 1rem;">Card Title</h3>
+        <p>This is a card layout that stands out from the regular content. Perfect for highlighting important information, quotes, or special sections.</p>
+      </div>
+      <p><br></p>
+    `,
+    
+    'feature-row': `
+      <div class="feature-row" style="display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; margin: 2rem 0;">
+        <div class="feature-icon" style="width: 60px; height: 60px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; flex-shrink: 0;"></div>
+        <div class="feature-content">
+          <h3 style="margin-bottom: 0.5rem;">Feature Title</h3>
+          <p>Describe your feature or highlight here. This layout is great for listing features, benefits, or key points with visual emphasis.</p>
+        </div>
+      </div>
+      <p><br></p>
+    `,
+    
+    'highlight-box': `
+      <div class="highlight-box" style="padding: 2rem; background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%); border-left: 4px solid #6366f1; border-radius: 8px; margin: 2rem 0;">
+        <h3 style="color: #6366f1; margin-bottom: 1rem;">Important Note</h3>
+        <p>This highlighted box draws attention to important information. Use it for tips, warnings, or key takeaways that you want readers to notice.</p>
+      </div>
+      <p><br></p>
+    `
+  };
+
+  // Handle layout selection
+  document.querySelectorAll('.layout-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const layout = btn.dataset.layout;
+      const html = textLayouts[layout];
+      
+      if (html && window.currentEditor) {
+        window.currentEditor.focus();
+        document.execCommand('insertHTML', false, html);
+        
+        // Update content
+        const contentInput = document.getElementById('content');
+        if (contentInput && window.currentEditor) {
+          contentInput.value = window.currentEditor.innerHTML;
+        }
+        
+        // Hide modal
+        document.getElementById('text-layouts').classList.add('hidden');
+      }
+    });
+  });
+
+  // Show text layouts modal
+  window.showTextLayouts = function() {
+    document.getElementById('text-layouts').classList.remove('hidden');
+  };
+
+  // Show alignment toolbar
+  window.showAlignmentToolbar = function() {
+    const toolbar = document.getElementById('text-alignment-toolbar');
+    toolbar.classList.remove('hidden');
+    
+    // Auto-hide after 5 seconds of inactivity
+    clearTimeout(window.alignmentToolbarTimeout);
+    window.alignmentToolbarTimeout = setTimeout(() => {
+      toolbar.classList.add('hidden');
+    }, 5000);
+  };
+
+  // Alignment button handlers
+  document.querySelectorAll('.align-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const align = btn.dataset.align;
+      
+      // Update active state
+      document.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      // Apply alignment
+      if (window.currentEditor) {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          const container = range.commonAncestorContainer.nodeType === 3 
+            ? range.commonAncestorContainer.parentElement 
+            : range.commonAncestorContainer;
+          
+          // Find the block element
+          let block = container;
+          while (block && !['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE'].includes(block.tagName)) {
+            block = block.parentElement;
+          }
+          
+          if (block) {
+            block.style.textAlign = align;
+          } else {
+            // Apply to selection
+            document.execCommand('justify' + align.charAt(0).toUpperCase() + align.slice(1), false, null);
+          }
+        }
+        
+        // Update content
+        const contentInput = document.getElementById('content');
+        if (contentInput) {
+          contentInput.value = window.currentEditor.innerHTML;
+        }
+      }
+      
+      // Reset auto-hide timer
+      clearTimeout(window.alignmentToolbarTimeout);
+      window.alignmentToolbarTimeout = setTimeout(() => {
+        document.getElementById('text-alignment-toolbar').classList.add('hidden');
+      }, 5000);
+    });
+  });
+
+  // Indent button handlers
+  document.querySelectorAll('.indent-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.indent;
+      
+      if (window.currentEditor) {
+        if (action === 'increase') {
+          document.execCommand('indent', false, null);
+        } else {
+          document.execCommand('outdent', false, null);
+        }
+        
+        // Update content
+        const contentInput = document.getElementById('content');
+        if (contentInput) {
+          contentInput.value = window.currentEditor.innerHTML;
+        }
+      }
+      
+      // Reset auto-hide timer
+      clearTimeout(window.alignmentToolbarTimeout);
+      window.alignmentToolbarTimeout = setTimeout(() => {
+        document.getElementById('text-alignment-toolbar').classList.add('hidden');
+      }, 5000);
+    });
+  });
+
+  // Close on click outside
+  document.getElementById('text-layouts')?.addEventListener('click', (e) => {
+    if (e.target.id === 'text-layouts') {
+      e.target.classList.add('hidden');
+    }
+  });
+</script>

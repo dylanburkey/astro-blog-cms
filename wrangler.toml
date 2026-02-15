@@ -1,0 +1,70 @@
+# Astro Blog CMS - Cloudflare Configuration
+# Update the database_id and bucket_name values after creating your resources
+
+name = "astro-blog-cms"
+main = "dist/_worker.js/index.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+assets = { directory = "./dist" }
+
+[build]
+command = "pnpm build"
+
+# D1 Database - Create with: wrangler d1 create blog-cms-db
+[[d1_databases]]
+binding = "DB"
+database_name = "blog-cms-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+# R2 Bucket for media - Create with: wrangler r2 bucket create blog-cms-assets
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "blog-cms-assets"
+
+# KV namespace for sessions - Create with: wrangler kv namespace create SESSION
+[[kv_namespaces]]
+binding = "SESSION"
+id = "YOUR_KV_NAMESPACE_ID_HERE"
+
+# Development environment
+[env.development]
+name = "astro-blog-cms-dev"
+
+[env.development.vars]
+SITE_URL = "http://localhost:4321"
+
+[[env.development.d1_databases]]
+binding = "DB"
+database_name = "blog-cms-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+[[env.development.r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "blog-cms-assets"
+
+[[env.development.kv_namespaces]]
+binding = "SESSION"
+id = "YOUR_KV_NAMESPACE_ID_HERE"
+
+# Production environment
+[env.production]
+name = "astro-blog-cms-prod"
+
+[env.production.vars]
+SITE_URL = "https://yourdomain.com"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "blog-cms-db"
+database_id = "YOUR_DATABASE_ID_HERE"
+
+[[env.production.r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "blog-cms-assets"
+
+[[env.production.kv_namespaces]]
+binding = "SESSION"
+id = "YOUR_KV_NAMESPACE_ID_HERE"
+
+[observability]
+enabled = true

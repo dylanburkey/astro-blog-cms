@@ -1,0 +1,195 @@
+---
+export interface Props {
+  heading?: string;
+  email?: string;
+  buttonText?: string;
+  buttonLink?: string;
+  backgroundImage?: string;
+}
+
+const {
+  heading = "Want to work with us? Let's talk",
+  email = "hello@example.com",
+  buttonText = "Contact us",
+  buttonLink = "/contact",
+  backgroundImage
+} = Astro.props;
+---
+
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="cta-background" style={backgroundImage ? `background-image: url(${backgroundImage})` : ''}>
+        <div class="cta-content">
+          <h3 class="cta-heading">{heading}</h3>
+          <a href={`mailto:${email}`} class="cta-email">{email}</a>
+          <div class="cta-button-wrapper">
+            <a href={buttonLink} class="cta-button">{buttonText}</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta-section {
+    padding: 0 1rem;
+    margin-top: -2rem;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .cta-card {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+    position: relative;
+  }
+
+  .cta-background {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+    /* Dynamic gradient background with cyber aesthetic */
+    background:
+      radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 50%, rgba(255, 0, 128, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 50% 100%, rgba(0, 212, 255, 0.2) 0%, transparent 60%),
+      linear-gradient(135deg,
+        #0a0f1b 0%,
+        rgba(123, 63, 242, 0.1) 25%,
+        rgba(0, 212, 255, 0.1) 50%,
+        rgba(255, 0, 128, 0.08) 75%,
+        #0a0f1b 100%
+      ),
+      #0a0f1b;
+  }
+
+  .cta-background::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg,
+      rgba(99, 102, 241, 0.4) 0%,
+      rgba(168, 85, 247, 0.3) 50%,
+      rgba(0, 212, 255, 0.3) 100%
+    );
+    z-index: 1;
+  }
+
+  /* Add animated gradient mesh effect */
+  .cta-background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+      linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    z-index: 1;
+    opacity: 0.5;
+  }
+
+  .cta-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  .cta-heading {
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.85);
+    margin: 0 0 1rem 0;
+  }
+
+  .cta-email {
+    display: inline-block;
+    font-size: 3rem;
+    font-weight: 700;
+    color: white;
+    text-decoration: none;
+    margin-bottom: 3rem;
+    transition: transform 0.3s ease;
+  }
+
+  .cta-email:hover {
+    transform: translateY(-2px);
+    text-decoration: underline;
+  }
+
+  .cta-button-wrapper {
+    padding-top: 1rem;
+  }
+
+  .cta-button {
+    display: inline-block;
+    padding: 1rem 2.5rem;
+    background: white;
+    color: var(--color-primary);
+    font-weight: 600;
+    font-size: 1.125rem;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  .cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+  }
+
+  /* Define RGB values for gradient overlay */
+  :root {
+    --color-primary-rgb: 99, 102, 241;
+    --color-secondary-rgb: 168, 85, 247;
+  }
+
+  @media (max-width: 992px) {
+
+    .cta-email {
+      font-size: 2.5rem;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .cta-content {
+      padding: 2rem 0;
+    }
+
+    .cta-heading {
+      font-size: 1.25rem;
+    }
+
+    .cta-email {
+      font-size: 1.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .cta-button {
+      padding: 0.875rem 2rem;
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .cta-email {
+      font-size: 1.5rem;
+      word-break: break-all;
+    }
+  }
+</style>

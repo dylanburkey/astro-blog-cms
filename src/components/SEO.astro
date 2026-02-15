@@ -1,0 +1,176 @@
+---
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  type?: 'website' | 'article' | 'profile';
+  publishedTime?: string;
+  modifiedTime?: string;
+  author?: string;
+  section?: string;
+  tags?: string[];
+  twitterCard?: 'summary' | 'summary_large_image' | 'app' | 'player';
+  noindex?: boolean;
+  jsonLd?: Record<string, any>;
+  siteName?: string;
+  twitterHandle?: string;
+}
+
+// Site configuration - customize these for your site
+const SITE_CONFIG = {
+  name: 'My Blog',
+  description: 'A modern blog powered by Astro Blog CMS',
+  url: import.meta.env.SITE || 'https://example.com',
+  twitterHandle: '@myblog',
+  email: 'hello@example.com',
+  socialLinks: [
+    // Add your social links here
+    // 'https://twitter.com/myblog',
+    // 'https://github.com/myblog',
+  ]
+};
+
+const {
+  title = `${SITE_CONFIG.name} - ${SITE_CONFIG.description}`,
+  description = SITE_CONFIG.description,
+  image = '/og-image.png',
+  canonical,
+  type = 'website',
+  publishedTime,
+  modifiedTime,
+  author = SITE_CONFIG.name,
+  section,
+  tags = [],
+  twitterCard = 'summary_large_image',
+  noindex = false,
+  jsonLd,
+  siteName = SITE_CONFIG.name,
+  twitterHandle = SITE_CONFIG.twitterHandle,
+} = Astro.props;
+
+const siteUrl = SITE_CONFIG.url;
+const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
+const canonicalUrl = canonical || Astro.url.href;
+
+// Default JSON-LD schema for organization
+const defaultOrgSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: siteName,
+  description: description,
+  url: siteUrl,
+  logo: `${siteUrl}/logo.svg`,
+  sameAs: SITE_CONFIG.socialLinks,
+  contactPoint: SITE_CONFIG.email ? {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    email: SITE_CONFIG.email
+  } : undefined
+};
+
+// Default website schema
+const defaultWebsiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: siteName,
+  url: siteUrl,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${siteUrl}/search?q={search_term_string}`
+    },
+    'query-input': 'required name=search_term_string'
+  }
+};
+
+// Article schema for blog posts
+const articleSchema = type === 'article' ? {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description: description,
+  image: fullImageUrl,
+  datePublished: publishedTime,
+  dateModified: modifiedTime || publishedTime,
+  author: {
+    '@type': 'Person',
+    name: author
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${siteUrl}/logo.svg`
+    }
+  },
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': canonicalUrl
+  },
+  articleSection: section,
+  keywords: tags.join(', ')
+} : null;
+
+// Combine schemas
+const schemas = [
+  defaultOrgSchema,
+  defaultWebsiteSchema,
+  articleSchema,
+  jsonLd
+].filter(Boolean);
+---
+
+<!-- Primary Meta Tags -->
+<title>{title}</title>
+<meta name="title" content={title} />
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content={type} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={fullImageUrl} />
+<meta property="og:image:alt" content={title} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:locale" content="en_US" />
+
+{type === 'article' && (
+  <>
+    {publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {author && <meta property="article:author" content={author} />}
+    {section && <meta property="article:section" content={section} />}
+    {tags.map(tag => <meta property="article:tag" content={tag} />)}
+  </>
+)}
+
+<!-- Twitter -->
+<meta name="twitter:card" content={twitterCard} />
+<meta name="twitter:url" content={canonicalUrl} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={fullImageUrl} />
+{twitterHandle && <meta name="twitter:site" content={twitterHandle} />}
+{twitterHandle && <meta name="twitter:creator" content={twitterHandle} />}
+
+<!-- Additional Meta Tags -->
+<meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+<meta name="author" content={author} />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8" />
+
+<!-- Favicons -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+<!-- JSON-LD Structured Data -->
+{schemas.map(schema => (
+  <script type="application/ld+json" set:html={JSON.stringify(schema)} />
+))}

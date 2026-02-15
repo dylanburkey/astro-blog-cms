@@ -1,0 +1,580 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import BlogCard from '../../../components/ui/BlogCard.astro';
+
+const { category } = Astro.params;
+
+// Handle undefined category
+if (!category || category === 'undefined') {
+  return Astro.redirect('/blog');
+}
+
+// Format category for display (handle URL slugs)
+const displayCategory = category
+  ?.replace(/-/g, ' ')
+  .split(' ')
+  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+  .join(' ');
+
+// Fetch blog posts for this category
+let blogPosts = [];
+let totalPosts = 0;
+let allCategories = [];
+
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    // Fetch all categories for the list
+    const categoriesResult = await db.prepare(`
+      SELECT 
+        c.id,
+        c.name,
+        c.slug,
+        (
+          SELECT COUNT(DISTINCT pc.post_id)
+          FROM blog_post_categories pc
+          INNER JOIN blog_posts p ON pc.post_id = p.id
+          WHERE pc.category_id = c.id AND p.status = 'published'
+        ) as count
+      FROM blog_categories c
+      HAVING count > 0
+      ORDER BY count DESC, c.name ASC
+    `).all();
+    
+    allCategories = categoriesResult.results?.map(cat => ({
+      name: cat.name,
+      slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-'),
+      count: Number(cat.count) || 0,
+      active: cat.slug === category || cat.name.toLowerCase().replace(/\s+/g, '-') === category
+    })) || [];
+    
+    // First get the category ID using the slug
+    const categoryResult = await db.prepare(`
+      SELECT id FROM blog_categories 
+      WHERE slug = ?
+      LIMIT 1
+    `).bind(category).first();
+    
+    if (categoryResult) {
+      // Get posts for this category
+      const result = await db.prepare(`
+        SELECT 
+          p.*,
+          u.username as author_name,
+          u.role as author_role,
+          u.avatar as author_avatar,
+          GROUP_CONCAT(DISTINCT c.name) as categories,
+          GROUP_CONCAT(DISTINCT t.name) as tags
+        FROM blog_posts p
+        LEFT JOIN admin_users u ON p.author_id = u.id
+        LEFT JOIN blog_post_categories pc ON p.id = pc.post_id
+        LEFT JOIN blog_categories c ON pc.category_id = c.id
+        LEFT JOIN blog_post_tags pt ON p.id = pt.post_id
+        LEFT JOIN blog_tags t ON pt.tag_id = t.id
+        WHERE p.status = 'published' 
+          AND pc.category_id = ?
+        GROUP BY p.id
+        ORDER BY p.published_at DESC
+      `).bind(categoryResult.id).all();
+      
+      blogPosts = result.results?.map(post => {
+        // Process image URL to ensure it's properly formatted
+        let coverImage = post.cover_image;
+        if (coverImage) {
+          // If it's a full URL, use it as is
+          if (coverImage.startsWith('http')) {
+            // Already a full URL
+          } else if (coverImage.startsWith('/assets/')) {
+            // Relative asset path - keep as is
+          } else if (coverImage.startsWith('assets/')) {
+            // Missing leading slash
+            coverImage = '/' + coverImage;
+          } else {
+            // Assume it's a regular image path
+            if (!coverImage.startsWith('/')) {
+              coverImage = '/' + coverImage;
+            }
+          }
+        }
+        return {
+          ...post,
+          cover_image: coverImage
+        };
+      }) || [];
+      totalPosts = blogPosts.length;
+    }
+  }
+} catch (err) {
+  console.error('Error fetching category posts:', err);
+}
+
+// Fallback sample data for development
+if (blogPosts.length === 0) {
+  blogPosts = [
+    {
+      id: '1',
+      title: 'Understanding DeFi Protocols in 2024',
+      slug: 'understanding-defi-protocols',
+      excerpt: 'A comprehensive guide to decentralized finance protocols and how they are reshaping the financial landscape.',
+      cover_image: '/img/blog/defi-protocols.jpg',
+      published_at: new Date().toISOString(),
+      author_name: 'Blog Author',
+      author_role: 'DeFi Analyst',
+      author_avatar: null,
+      categories: displayCategory,
+      tags: 'DeFi,Protocols,Web3',
+      view_count: 1250,
+      read_time: 8
+    },
+    {
+      id: '2',
+      title: 'Smart Contract Security Best Practices',
+      slug: 'smart-contract-security',
+      excerpt: 'Essential security considerations when developing and auditing smart contracts on blockchain platforms.',
+      cover_image: '/img/blog/smart-contracts.jpg',
+      published_at: new Date(Date.now() - 86400000).toISOString(),
+      author_name: 'Security Team',
+      author_role: 'Security Researcher',
+      author_avatar: null,
+      categories: displayCategory,
+      tags: 'Security,Smart Contracts,Blockchain',
+      view_count: 890,
+      read_time: 12
+    }
+  ];
+  totalPosts = 2;
+}
+---
+
+<Layout title={`${displayCategory} Articles`}>
+  <div class="category-page">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <nav class="breadcrumb">
+          <a href="/">Home</a>
+          <span>/</span>
+          <a href="/blog">Blog</a>
+          <span>/</span>
+          <span class="current">{displayCategory}</span>
+        </nav>
+        
+        <h1 class="page-title">{displayCategory}</h1>
+        <p class="page-subtitle">
+          {totalPosts} {totalPosts === 1 ? 'article' : 'articles'} in this category
+        </p>
+      </div>
+
+      <!-- Categories List -->
+      {allCategories.length > 0 && (
+        <div class="categories-section">
+          <h2 class="section-title">Browse Categories</h2>
+          <div class="categories-list">
+            {allCategories.map(cat => (
+              <a 
+                href={`/blog/category/${cat.slug}`} 
+                class={`category-item ${cat.active ? 'active' : ''}`}
+              >
+                <span class="category-name">{cat.name}</span>
+                <span class="category-count">{cat.count}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Blog Posts Grid -->
+      <div class="posts-grid">
+        {blogPosts.length > 0 ? (
+          blogPosts.map(post => (
+            <article class="blog-card">
+              <a href={`/blog/${post.slug}`} class="card-link">
+                <div class="card-image">
+                  {(() => {
+                    const imageSrc = post.cover_image || '/img/blog/default-cover.jpg';
+                    // Extract just the path portion if it's a full URL to our own domain
+                    const imageUrl = imageSrc.includes('blog-website-v2-dev.ggenega.workers.dev') 
+                      ? imageSrc.split('blog-website-v2-dev.ggenega.workers.dev')[1]
+                      : imageSrc;
+                    return (
+                      <img 
+                        src={imageUrl} 
+                        alt={post.title}
+                        loading="lazy"
+                        decoding="async"
+                        onerror="this.src='/img/blog/default-cover.jpg'"
+                      />
+                    );
+                  })()}
+                </div>
+                
+                <div class="card-content">
+                  <div class="card-meta">
+                    {post.categories && (
+                      <span class="category-badge">{post.categories.split(',')[0]}</span>
+                    )}
+                    <span class="read-time">{post.read_time || 5} min read</span>
+                  </div>
+                  
+                  <h2 class="card-title">{post.title}</h2>
+                  
+                  {post.excerpt && (
+                    <p class="card-excerpt">{post.excerpt}</p>
+                  )}
+                  
+                  <div class="card-footer">
+                    <div class="author-info">
+                      <img 
+                        src={post.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author_name || 'Author')}&background=6366f1&color=fff&size=100`}
+                        alt={post.author_name}
+                        class="author-avatar"
+                        width="32"
+                        height="32"
+                      />
+                      <div class="author-details">
+                        <span class="author-name">{post.author_name}</span>
+                        <span class="publish-date">
+                          {new Date(post.published_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <span class="read-more">Read more →</span>
+                  </div>
+                </div>
+              </a>
+            </article>
+          ))
+        ) : (
+          <div class="no-posts">
+            <p>No articles found in this category.</p>
+            <a href="/blog" class="btn btn-primary">Browse All Articles</a>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .category-page {
+    min-height: 100vh;
+    padding: var(--space-2xl) 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-xl);
+  }
+
+  /* Breadcrumb Navigation */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-xl);
+    line-height: 1;
+  }
+
+  .breadcrumb a,
+  .breadcrumb span {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    line-height: 24px;
+  }
+
+  .breadcrumb a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color var(--transition-base);
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary);
+  }
+
+  .breadcrumb > span:not(.current) {
+    color: var(--color-text-muted);
+    padding: 0 var(--space-xs);
+  }
+
+  .breadcrumb .current {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  /* Page Header */
+  .page-header {
+    margin-bottom: var(--space-3xl);
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+    background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .page-subtitle {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+
+  /* Posts Grid */
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--space-xl);
+  }
+
+  /* Blog Card */
+  .blog-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-base);
+    height: 100%;
+  }
+
+  .blog-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card-image {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--color-background);
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+  }
+
+  .blog-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+
+  .card-content {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+    font-size: var(--text-sm);
+  }
+
+  .category-badge {
+    padding: 4px 12px;
+    background: var(--color-primary-alpha-10);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+  }
+
+  .read-time {
+    color: var(--color-text-muted);
+  }
+
+  .card-title {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+    line-height: 1.3;
+  }
+
+  .card-excerpt {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: var(--space-lg);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .author-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .author-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .author-details {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .author-name {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .publish-date {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  .read-more {
+    font-size: var(--text-sm);
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+
+  /* No Posts */
+  .no-posts {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-3xl);
+  }
+
+  .no-posts p {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xl);
+  }
+
+  .btn {
+    display: inline-block;
+    padding: var(--space-md) var(--space-xl);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all var(--transition-base);
+  }
+
+  .btn:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-2px);
+  }
+
+  /* Categories Section */
+  .categories-section {
+    margin-bottom: var(--space-2xl);
+    padding: var(--space-xl);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+  }
+
+  .section-title {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-lg);
+    color: var(--color-text);
+  }
+
+  .categories-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .category-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    transition: all var(--transition-base);
+  }
+
+  .category-item:hover {
+    background: var(--color-primary-alpha-10);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .category-item.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+  }
+
+  .category-name {
+    font-weight: 500;
+  }
+
+  .category-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+  }
+
+  .category-item.active .category-count {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 var(--space-md);
+    }
+
+    .page-title {
+      font-size: var(--text-3xl);
+    }
+
+    .posts-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+  }
+</style>

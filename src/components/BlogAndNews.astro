@@ -1,0 +1,673 @@
+---
+export interface NewsItem {
+  id: string;
+  title: string;
+  category: string;
+  timeAgo: string;
+  image: string;
+  author: {
+    name: string;
+    credentials: string;
+    avatar: string;
+  };
+  href: string;
+}
+
+// Sample news items - replace with your own content or fetch from database
+const newsItems: NewsItem[] = [
+  {
+    id: '1',
+    title: 'Getting Started with Astro: A Complete Beginners Guide',
+    category: 'Tutorials',
+    timeAgo: '12 hours ago',
+    image: '/img/blog/tutorial-1.jpg',
+    author: {
+      name: 'Alex Johnson',
+      credentials: 'Senior Developer',
+      avatar: '/img/avatars/alex.jpg'
+    },
+    href: '/blog/getting-started-astro'
+  },
+  {
+    id: '2',
+    title: 'Why We Built Our CMS on Cloudflare Edge',
+    category: 'Technology',
+    timeAgo: '1 day ago',
+    image: '/img/blog/tech-1.jpg',
+    author: {
+      name: 'Jenny Wilson',
+      credentials: 'Tech Lead',
+      avatar: '/img/avatars/jenny.jpg'
+    },
+    href: '/blog/cloudflare-edge-cms'
+  },
+  {
+    id: '3',
+    title: 'New Feature: Rich Text Editor with Layout Templates',
+    category: 'Platform Update',
+    timeAgo: 'Nov 24, 2024',
+    image: '/img/blog/update-1.jpg',
+    author: {
+      name: 'Albert Flores',
+      credentials: 'Lead Developer',
+      avatar: '/img/avatars/albert.jpg'
+    },
+    href: '/blog/editor-layout-templates'
+  },
+  {
+    id: '4',
+    title: 'Understanding Islands Architecture in Modern Web Development',
+    category: 'Education',
+    timeAgo: 'Oct 13, 2024',
+    image: '/img/blog/education-1.jpg',
+    author: {
+      name: 'Sarah Chen',
+      credentials: 'Web Architecture Lead',
+      avatar: '/img/avatars/sarah.jpg'
+    },
+    href: '/blog/islands-architecture-guide'
+  },
+  {
+    id: '5',
+    title: 'Performance Comparison: Astro vs Traditional CMS Platforms',
+    category: 'Analysis',
+    timeAgo: '2 days ago',
+    image: '/img/blog/analysis-1.jpg',
+    author: {
+      name: 'Michael Torres',
+      credentials: 'Performance Engineer',
+      avatar: '/img/avatars/michael.jpg'
+    },
+    href: '/blog/performance-comparison'
+  }
+];
+
+const { class: className = '' } = Astro.props;
+---
+
+<section class={`blog-news-section ${className}`}>
+  <div class="container">
+    <h2 class="section-title">Latest News & Market Insights</h2>
+    <div class="learn-more-wrapper">
+      <a href="/news" class="btn-learn-more btn-learn-more-dark">Learn More</a>
+    </div>
+    
+    <div class="carousel-wrapper">
+      <!-- Navigation buttons -->
+      <button 
+        type="button" 
+        id="prev-news" 
+        class="carousel-nav carousel-nav-prev"
+        aria-label="Previous slide"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <button 
+        type="button" 
+        id="next-news" 
+        class="carousel-nav carousel-nav-next"
+        aria-label="Next slide"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+
+      <!-- Carousel container -->
+      <div class="carousel-container">
+        <div class="carousel-track" id="carousel-track">
+          {newsItems.map((item) => (
+            <div class="carousel-slide">
+              <article class="news-card">
+                <div class="card-image-wrapper">
+                  <a href={item.href} class="card-link" aria-label="Read more"></a>
+                  <button class="bookmark-btn" aria-label="Save for later">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </button>
+                  <img src={item.image} class="card-image" alt={item.title} loading="lazy">
+                </div>
+                <div class="card-body">
+                  <div class="card-meta">
+                    <a href={`/news/category/${item.category.toLowerCase().replace(/\s+/g, '-')}`} class="category-badge">
+                      {item.category}
+                    </a>
+                    <span class="time-ago">{item.timeAgo}</span>
+                  </div>
+                  <h3 class="card-title">
+                    <a href={item.href}>{item.title}</a>
+                  </h3>
+                </div>
+                <div class="card-footer">
+                  <a href={`/author/${item.author.name.toLowerCase().replace(' ', '-')}`} class="author-link">
+                    <img src={item.author.avatar} class="author-avatar" alt={item.author.name}>
+                    <div class="author-info">
+                      <h6 class="author-name">{item.author.name}</h6>
+                      <span class="author-credentials">{item.author.credentials}</span>
+                    </div>
+                  </a>
+                </div>
+              </article>
+            </div>
+          ))}
+        </div>
+        
+        <!-- Pagination dots -->
+        <div class="carousel-pagination" id="carousel-pagination"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .blog-news-section {
+    padding: var(--space-3xl) 0;
+    background: var(--color-background);
+  }
+
+  .container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 var(--space-xl);
+  }
+
+  .section-title {
+    font-size: var(--text-3xl);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: var(--space-lg);
+    color: var(--color-text);
+  }
+
+  /* Learn More Button */
+  .learn-more-wrapper {
+    text-align: center;
+    margin-bottom: var(--space-2xl);
+  }
+
+  .btn-learn-more {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-xl);
+    background: transparent;
+    border: 2px solid white;
+    color: white;
+    font-size: var(--text-base);
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+    cursor: pointer;
+  }
+
+  .btn-learn-more:hover {
+    background: white;
+    color: var(--color-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  }
+
+  /* For non-gradient backgrounds */
+  .btn-learn-more-dark {
+    border-color: var(--color-text);
+    color: var(--color-text);
+  }
+
+  .btn-learn-more-dark:hover {
+    background: var(--color-text);
+    color: var(--color-background);
+  }
+
+  .carousel-wrapper {
+    position: relative;
+    padding: 0 60px;
+  }
+
+  /* Navigation buttons */
+  .carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    z-index: 2;
+  }
+
+  .carousel-nav:hover {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+  }
+
+  .carousel-nav-prev {
+    left: 0;
+  }
+
+  .carousel-nav-next {
+    right: 0;
+  }
+
+  /* Carousel container */
+  .carousel-container {
+    overflow: hidden;
+    margin: 0 -8px;
+  }
+
+  .carousel-track {
+    display: flex;
+    transition: transform 0.3s ease-in-out;
+    gap: 16px;
+    padding: 0 8px;
+  }
+
+  .carousel-slide {
+    flex: 0 0 calc(33.333% - 16px);
+    min-width: 0;
+  }
+
+  /* News card */
+  .news-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: all var(--transition-base);
+  }
+
+  .news-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  .card-image-wrapper {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+  }
+
+  .card-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  .bookmark-btn {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--space-sm);
+    z-index: 5;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: white;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .bookmark-btn:hover {
+    background: var(--color-primary);
+    color: white;
+    transform: scale(1.1);
+  }
+
+  .bookmark-btn.bookmarked {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .bookmark-btn.bookmarked svg {
+    fill: currentColor;
+  }
+
+  .card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .card-body {
+    padding: var(--space-lg);
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+  }
+
+  .category-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: var(--color-primary-alpha-10);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .category-badge:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .time-ago {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .card-title {
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  .card-title a {
+    color: var(--color-text);
+    text-decoration: none;
+    transition: color var(--transition-base);
+  }
+
+  .card-title a:hover {
+    color: var(--color-primary);
+  }
+
+  .card-footer {
+    padding: var(--space-lg);
+    padding-top: 0;
+    margin-top: auto;
+  }
+
+  .author-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .author-link:hover .author-name {
+    color: var(--color-primary);
+  }
+
+  .author-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    object-fit: cover;
+  }
+
+  .author-info {
+    flex: 1;
+  }
+
+  .author-name {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    margin-bottom: 2px;
+    transition: color var(--transition-base);
+  }
+
+  .author-credentials {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  /* Pagination dots */
+  .carousel-pagination {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-xs);
+    margin-top: var(--space-xl);
+  }
+
+  .pagination-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    background: var(--color-border);
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .pagination-dot:hover {
+    background: var(--color-primary-light);
+  }
+
+  .pagination-dot.active {
+    background: var(--color-primary);
+    width: 24px;
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .carousel-slide {
+      flex: 0 0 calc(50% - 16px);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .carousel-wrapper {
+      padding: 0 40px;
+    }
+
+    .carousel-nav {
+      width: 32px;
+      height: 32px;
+    }
+
+    .carousel-nav svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .carousel-slide {
+      flex: 0 0 calc(100% - 16px);
+    }
+
+    .section-title {
+      font-size: var(--text-2xl);
+    }
+  }
+
+  @media (max-width: 640px) {
+    .blog-news-section {
+      padding: var(--space-2xl) 0;
+    }
+
+    .container {
+      padding: 0 var(--space-md);
+    }
+
+    .carousel-wrapper {
+      padding: 0;
+    }
+
+    .carousel-nav {
+      display: none;
+    }
+
+    .carousel-container {
+      margin: 0;
+    }
+
+    .carousel-track {
+      padding: 0;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .carousel-slide {
+      scroll-snap-align: center;
+      flex: 0 0 85%;
+    }
+  }
+
+  /* Dark theme adjustments */
+  [data-theme="dark"] .news-card {
+    background: var(--color-surface);
+  }
+
+  [data-theme="dark"] .bookmark-btn {
+    background: var(--color-surface);
+    color: var(--color-text);
+  }
+
+  [data-theme="dark"] .bookmark-btn:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  [data-theme="dark"] .carousel-nav {
+    background: var(--color-surface);
+    border-color: var(--color-border);
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const track = document.getElementById('carousel-track');
+    const prevBtn = document.getElementById('prev-news');
+    const nextBtn = document.getElementById('next-news');
+    const pagination = document.getElementById('carousel-pagination');
+    const slides = track?.querySelectorAll('.carousel-slide');
+    
+    if (!track || !slides || slides.length === 0) return;
+    
+    let currentIndex = 0;
+    let slidesPerView = getSlidesPerView();
+    const totalSlides = slides.length;
+    const maxIndex = Math.max(0, totalSlides - slidesPerView);
+    
+    // Create pagination dots
+    function createPagination() {
+      if (!pagination) return;
+      pagination.innerHTML = '';
+      const dotsCount = Math.ceil(totalSlides / slidesPerView);
+      
+      for (let i = 0; i < dotsCount; i++) {
+        const dot = document.createElement('button');
+        dot.className = 'pagination-dot';
+        dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
+        if (i === 0) dot.classList.add('active');
+        
+        dot.addEventListener('click', () => {
+          currentIndex = i * slidesPerView;
+          if (currentIndex > maxIndex) currentIndex = maxIndex;
+          updateCarousel();
+        });
+        
+        pagination.appendChild(dot);
+      }
+    }
+    
+    // Get slides per view based on viewport
+    function getSlidesPerView() {
+      if (window.innerWidth <= 640) return 1;
+      if (window.innerWidth <= 1200) return 2;
+      return 3;
+    }
+    
+    // Update carousel position
+    function updateCarousel() {
+      const slideWidth = (slides[0] as HTMLElement).offsetWidth;
+      const gap = 16;
+      const translateX = -currentIndex * (slideWidth + gap);
+      track.style.transform = `translateX(${translateX}px)`;
+      
+      // Update pagination
+      const dots = pagination?.querySelectorAll('.pagination-dot');
+      if (dots) {
+        dots.forEach((dot, index) => {
+          const activeIndex = Math.floor(currentIndex / slidesPerView);
+          dot.classList.toggle('active', index === activeIndex);
+        });
+      }
+      
+      // Update button states
+      if (prevBtn) prevBtn.disabled = currentIndex === 0;
+      if (nextBtn) nextBtn.disabled = currentIndex >= maxIndex;
+    }
+    
+    // Navigation
+    prevBtn?.addEventListener('click', () => {
+      if (currentIndex > 0) {
+        currentIndex = Math.max(0, currentIndex - slidesPerView);
+        updateCarousel();
+      }
+    });
+    
+    nextBtn?.addEventListener('click', () => {
+      if (currentIndex < maxIndex) {
+        currentIndex = Math.min(maxIndex, currentIndex + slidesPerView);
+        updateCarousel();
+      }
+    });
+    
+    // Handle bookmark buttons
+    const bookmarkBtns = document.querySelectorAll('.bookmark-btn');
+    bookmarkBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        btn.classList.toggle('bookmarked');
+        const svg = btn.querySelector('svg');
+        if (btn.classList.contains('bookmarked')) {
+          svg?.setAttribute('fill', 'currentColor');
+        } else {
+          svg?.setAttribute('fill', 'none');
+        }
+      });
+    });
+    
+    // Handle resize
+    let resizeTimer: number;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const newSlidesPerView = getSlidesPerView();
+        if (newSlidesPerView !== slidesPerView) {
+          slidesPerView = newSlidesPerView;
+          currentIndex = 0;
+          createPagination();
+          updateCarousel();
+        }
+      }, 250);
+    });
+    
+    // Initialize
+    createPagination();
+    updateCarousel();
+  });
+</script>

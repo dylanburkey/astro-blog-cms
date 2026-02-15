@@ -1,0 +1,512 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { isAuthenticated } from '../../../lib/auth';
+
+// Check authentication
+const auth = await isAuthenticated(Astro);
+if (!auth.authenticated) {
+  return Astro.redirect('/ax7k9m2p5d/login');
+}
+
+// Get tags from database
+const DB = Astro.locals.runtime?.env?.DB;
+let tags = [];
+let error = null;
+
+if (DB) {
+  try {
+    const result = await DB.prepare(`
+      SELECT t.*, COUNT(DISTINCT pt.post_id) as post_count
+      FROM blog_tags t
+      LEFT JOIN blog_post_tags pt ON t.id = pt.tag_id
+      GROUP BY t.id
+      ORDER BY t.name ASC
+    `).all();
+    tags = result.results || [];
+  } catch (e) {
+    console.error('Error fetching tags:', e);
+    error = e.message;
+  }
+}
+---
+
+<AdminLayout title="Tag Management">
+  <div class="tag-admin">
+    <header class="admin-header">
+      <div class="header-content">
+        <h1>Tag Management</h1>
+        <p class="subtitle">Organize your blog posts with tags</p>
+      </div>
+      <button id="addTagBtn" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add Tag
+      </button>
+    </header>
+
+    {error && (
+      <div class="alert alert-error">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>Error loading tags: {error}</span>
+      </div>
+    )}
+
+    <div class="tags-container">
+      {tags.map(tag => (
+        <div class="tag-item">
+          <div class="tag-content">
+            <span class="tag-name">{tag.name}</span>
+            {tag.description && (
+              <span class="tag-description" title={tag.description}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </span>
+            )}
+            <span class="tag-count">{tag.post_count}</span>
+          </div>
+          <div class="tag-actions">
+            <button class="btn-icon" onclick={`editTag(${tag.id}, '${tag.name}', '${tag.slug}', '${tag.description || ''}')`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+            </button>
+            <button class="btn-icon btn-danger" onclick={`deleteTag(${tag.id}, '${tag.name}')`}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {tags.length === 0 && !error && (
+      <div class="empty-state">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"></path>
+          <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+        <h3>No Tags Yet</h3>
+        <p>Create your first tag to categorize your blog posts</p>
+        <button class="btn btn-primary" onclick="document.getElementById('addTagBtn').click()">
+          Create Tag
+        </button>
+      </div>
+    )}
+  </div>
+
+  <!-- Add/Edit Tag Modal -->
+  <div id="tagModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalTitle">Add Tag</h2>
+        <button class="modal-close" onclick="closeTagModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <form id="tagForm">
+        <input type="hidden" id="tagId" name="id" />
+        <div class="form-group">
+          <label for="tagName">Tag Name</label>
+          <input type="text" id="tagName" name="name" required class="form-control" placeholder="AI" />
+        </div>
+        <div class="form-group">
+          <label for="tagSlug">Slug</label>
+          <input type="text" id="tagSlug" name="slug" required class="form-control" placeholder="ai" />
+          <p class="help-text">URL-friendly version of the name</p>
+        </div>
+        <div class="form-group">
+          <label for="tagDescription">Description</label>
+          <textarea id="tagDescription" name="description" class="form-control" rows="3" placeholder="Brief description of this tag"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeTagModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Tag</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .tag-admin {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .header-content h1 {
+    font-size: 2rem;
+    margin: 0;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    margin: 0.5rem 0 0;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .tag-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    transition: all var(--transition-base);
+  }
+
+  .tag-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .tag-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tag-name {
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  .tag-description {
+    color: var(--color-text-muted);
+    cursor: help;
+    display: flex;
+    align-items: center;
+  }
+
+  .tag-count {
+    padding: 0.125rem 0.5rem;
+    background: var(--color-background);
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .tag-actions {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .btn {
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-primary {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    background: var(--color-primary-dark);
+  }
+
+  .btn-secondary {
+    background: var(--color-surface-light);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+
+  .btn-icon {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .btn-icon:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .btn-icon.btn-danger:hover {
+    background: #ef4444;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--color-text-muted);
+  }
+
+  .empty-state h3 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.25rem;
+  }
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.show {
+    display: flex;
+  }
+
+  .modal-content {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h2 {
+    margin: 0;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+  }
+
+  .modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+  }
+
+  #tagForm {
+    padding: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+
+  .form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-alpha-10);
+  }
+
+  .help-text {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+
+  @media (max-width: 768px) {
+    .tag-admin {
+      padding: 1rem;
+    }
+
+    .admin-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+  }
+</style>
+
+<script>
+  // Generate slug from name
+  document.getElementById('tagName')?.addEventListener('input', (e) => {
+    const name = e.target.value;
+    const slugField = document.getElementById('tagSlug');
+    if (slugField && !slugField.dataset.manual) {
+      slugField.value = name.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+  });
+
+  // Mark slug as manually edited
+  document.getElementById('tagSlug')?.addEventListener('input', (e) => {
+    e.target.dataset.manual = 'true';
+  });
+
+  // Add tag button
+  document.getElementById('addTagBtn')?.addEventListener('click', () => {
+    document.getElementById('modalTitle').textContent = 'Add Tag';
+    document.getElementById('tagForm').reset();
+    document.getElementById('tagId').value = '';
+    document.getElementById('tagSlug').dataset.manual = '';
+    document.getElementById('tagModal').classList.add('show');
+  });
+
+  // Edit tag
+  window.editTag = function(id, name, slug, description) {
+    document.getElementById('modalTitle').textContent = 'Edit Tag';
+    document.getElementById('tagId').value = id;
+    document.getElementById('tagName').value = name;
+    document.getElementById('tagSlug').value = slug;
+    document.getElementById('tagSlug').dataset.manual = 'true';
+    document.getElementById('tagDescription').value = description;
+    document.getElementById('tagModal').classList.add('show');
+  };
+
+  // Close modal
+  window.closeTagModal = function() {
+    document.getElementById('tagModal').classList.remove('show');
+  };
+
+  // Delete tag
+  window.deleteTag = async function(id, name) {
+    if (!confirm(`Are you sure you want to delete the tag "${name}"? It will be removed from all posts.`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/ax7k9m2p5d/api/blog/tag/delete.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id })
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to delete tag');
+      }
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      alert('An error occurred while deleting the tag');
+    }
+  };
+
+  // Handle form submission
+  document.getElementById('tagForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData);
+    
+    const isEdit = !!data.id;
+    const url = isEdit 
+      ? '/ax7k9m2p5d/api/blog/tag/update.json'
+      : '/ax7k9m2p5d/api/blog/tag/create.json';
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        const error = await response.json();
+        alert(error.message || 'Failed to save tag');
+      }
+    } catch (error) {
+      console.error('Error saving tag:', error);
+      alert('An error occurred while saving the tag');
+    }
+  });
+
+  // Close modal on outside click
+  document.getElementById('tagModal')?.addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) {
+      closeTagModal();
+    }
+  });
+</script>

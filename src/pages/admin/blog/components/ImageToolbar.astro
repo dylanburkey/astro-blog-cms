@@ -1,0 +1,343 @@
+---
+// Image editing toolbar component
+---
+
+<div id="image-toolbar" class="image-toolbar hidden">
+  <div class="toolbar-section">
+    <label>Size:</label>
+    <select id="image-size" class="toolbar-select">
+      <option value="small">Small (25%)</option>
+      <option value="medium" selected>Medium (50%)</option>
+      <option value="large">Large (75%)</option>
+      <option value="full">Full (100%)</option>
+      <option value="custom">Custom</option>
+    </select>
+    <input type="number" id="custom-width" class="toolbar-input hidden" placeholder="Width (px)" min="50" max="2000">
+  </div>
+
+  <div class="toolbar-section">
+    <label>Layout:</label>
+    <div class="layout-buttons">
+      <button type="button" class="layout-btn" data-layout="inline" title="Inline">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+        </svg>
+      </button>
+      <button type="button" class="layout-btn" data-layout="float-left" title="Float Left">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="8" height="8" rx="1"/>
+          <line x1="14" y1="3" x2="21" y2="3"/>
+          <line x1="14" y1="6" x2="21" y2="6"/>
+          <line x1="14" y1="9" x2="21" y2="9"/>
+          <line x1="3" y1="14" x2="21" y2="14"/>
+          <line x1="3" y1="17" x2="21" y2="17"/>
+        </svg>
+      </button>
+      <button type="button" class="layout-btn" data-layout="float-right" title="Float Right">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="13" y="3" width="8" height="8" rx="1"/>
+          <line x1="3" y1="3" x2="10" y2="3"/>
+          <line x1="3" y1="6" x2="10" y2="6"/>
+          <line x1="3" y1="9" x2="10" y2="9"/>
+          <line x1="3" y1="14" x2="21" y2="14"/>
+          <line x1="3" y1="17" x2="21" y2="17"/>
+        </svg>
+      </button>
+      <button type="button" class="layout-btn" data-layout="center" title="Center">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="6" y="3" width="12" height="10" rx="1"/>
+          <line x1="3" y1="16" x2="21" y2="16"/>
+          <line x1="3" y1="19" x2="21" y2="19"/>
+        </svg>
+      </button>
+      <button type="button" class="layout-btn" data-layout="figure" title="Figure with Caption">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="12" rx="1"/>
+          <line x1="6" y1="18" x2="18" y2="18"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-section">
+    <label>Alt Text:</label>
+    <input type="text" id="image-alt-text" class="toolbar-input" placeholder="Describe image for accessibility">
+  </div>
+
+  <div class="toolbar-section">
+    <label>Caption:</label>
+    <input type="text" id="image-caption" class="toolbar-input" placeholder="Optional caption (for figure layout)">
+  </div>
+
+  <div class="toolbar-section">
+    <button type="button" id="apply-image-changes" class="btn btn-sm btn-primary">Apply</button>
+    <button type="button" id="remove-image" class="btn btn-sm btn-danger">Remove</button>
+  </div>
+</div>
+
+<style>
+  .image-toolbar {
+    position: absolute;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    max-width: 600px;
+  }
+
+  .image-toolbar.hidden {
+    display: none;
+  }
+
+  .toolbar-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .toolbar-section label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+  }
+
+  .toolbar-select,
+  .toolbar-input {
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text);
+    font-size: 0.875rem;
+  }
+
+  .toolbar-input {
+    min-width: 150px;
+  }
+
+  .toolbar-input.hidden {
+    display: none;
+  }
+
+  .layout-buttons {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .layout-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-background);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-base);
+  }
+
+  .layout-btn:hover {
+    background: var(--color-primary-alpha-10);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+  }
+
+  .layout-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  @media (max-width: 768px) {
+    .image-toolbar {
+      flex-direction: column;
+      max-width: 90%;
+    }
+
+    .toolbar-section {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+  }
+</style>
+
+<script>
+  let selectedImage = null;
+  
+  // Image size handling
+  const imageSizeSelect = document.getElementById('image-size');
+  const customWidthInput = document.getElementById('custom-width');
+  
+  imageSizeSelect?.addEventListener('change', (e) => {
+    if (e.target.value === 'custom') {
+      customWidthInput.classList.remove('hidden');
+    } else {
+      customWidthInput.classList.add('hidden');
+    }
+  });
+
+  // Layout button handling
+  document.querySelectorAll('.layout-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.layout-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  // Apply changes - now using ComponentManager for granular updates
+  document.getElementById('apply-image-changes')?.addEventListener('click', () => {
+    if (!selectedImage) return;
+
+    const size = imageSizeSelect.value;
+    const layout = document.querySelector('.layout-btn.active')?.dataset.layout || 'inline';
+    const altText = document.getElementById('image-alt-text').value;
+    const caption = document.getElementById('image-caption').value;
+
+    // Calculate width
+    let width = '100%';
+    switch (size) {
+      case 'small': width = '25%'; break;
+      case 'medium': width = '50%'; break;
+      case 'large': width = '75%'; break;
+      case 'full': width = '100%'; break;
+      case 'custom': width = customWidthInput.value ? `${customWidthInput.value}px` : '50%'; break;
+    }
+
+    // Try to use ComponentManager for granular update
+    const cm = window.componentManager;
+    const component = cm?.getComponentByElement(selectedImage);
+    
+    if (component && layout !== 'figure') {
+      // Granular update - only update changed properties
+      cm.updateImage(component.id, {
+        alt: altText,
+        width: width,
+        layout: layout
+      });
+      console.log('Granular update applied to component:', component.id);
+    } else if (layout === 'figure') {
+      // Convert to figure - need to replace element
+      const figure = document.createElement('figure');
+      figure.className = 'blog-figure';
+      figure.style.width = width;
+      figure.style.maxWidth = '100%';
+      figure.style.margin = '2rem auto';
+      figure.style.overflow = 'hidden';
+      
+      const img = document.createElement('img');
+      img.src = selectedImage.src;
+      img.alt = altText || '';
+      img.style.width = '100%';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.className = 'blog-image editable';
+      
+      figure.appendChild(img);
+      
+      if (caption) {
+        const figcaption = document.createElement('figcaption');
+        figcaption.textContent = caption;
+        figcaption.style.textAlign = 'center';
+        figcaption.style.marginTop = '0.5rem';
+        figcaption.style.fontSize = '0.875rem';
+        figcaption.style.color = '#666';
+        figure.appendChild(figcaption);
+      }
+
+      // Replace and register new component
+      selectedImage.parentNode.replaceChild(figure, selectedImage);
+      if (cm) cm.registerElement(figure);
+    } else {
+      // Fallback: direct DOM update without component manager
+      selectedImage.alt = altText || '';
+      selectedImage.style.width = width;
+      selectedImage.style.maxWidth = '100%';
+      selectedImage.style.height = 'auto';
+      
+      // Apply layout
+      selectedImage.classList.remove('float-left', 'float-right', 'center', 'inline');
+      switch (layout) {
+        case 'float-left':
+          selectedImage.classList.add('float-left');
+          selectedImage.style.float = 'left';
+          selectedImage.style.marginRight = '1rem';
+          selectedImage.style.marginBottom = '0.5rem';
+          break;
+        case 'float-right':
+          selectedImage.classList.add('float-right');
+          selectedImage.style.float = 'right';
+          selectedImage.style.marginLeft = '1rem';
+          selectedImage.style.marginBottom = '0.5rem';
+          break;
+        case 'center':
+          selectedImage.classList.add('center');
+          selectedImage.style.float = '';
+          selectedImage.style.display = 'block';
+          selectedImage.style.margin = '1rem auto';
+          break;
+        default:
+          selectedImage.classList.add('inline');
+          selectedImage.style.float = '';
+      }
+    }
+    
+    // Hide toolbar
+    document.getElementById('image-toolbar').classList.add('hidden');
+    selectedImage = null;
+
+    // Sync content
+    const editor = document.getElementById('editor');
+    const contentInput = document.getElementById('content');
+    if (editor && contentInput) {
+      contentInput.value = editor.innerHTML;
+    }
+  });
+
+  // Remove image
+  document.getElementById('remove-image')?.addEventListener('click', () => {
+    if (!selectedImage) return;
+    
+    selectedImage.remove();
+    document.getElementById('image-toolbar').classList.add('hidden');
+    selectedImage = null;
+
+    // Update content
+    const editor = document.getElementById('editor');
+    const contentInput = document.getElementById('content');
+    if (editor && contentInput) {
+      contentInput.value = editor.innerHTML;
+    }
+  });
+
+  // Export function for editor to use
+  window.showImageToolbar = function(img) {
+    selectedImage = img;
+    const toolbar = document.getElementById('image-toolbar');
+    
+    // Position toolbar near the image
+    const rect = img.getBoundingClientRect();
+    toolbar.style.top = `${rect.bottom + window.scrollY + 10}px`;
+    toolbar.style.left = `${rect.left + window.scrollX}px`;
+    
+    // Set current values
+    if (img.alt) {
+      document.getElementById('image-alt-text').value = img.alt;
+    }
+    
+    // Show toolbar
+    toolbar.classList.remove('hidden');
+  };
+</script>

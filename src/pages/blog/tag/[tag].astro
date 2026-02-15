@@ -1,0 +1,783 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+
+const { tag } = Astro.params;
+
+// Handle undefined tag
+if (!tag || tag === 'undefined') {
+  return Astro.redirect('/blog');
+}
+
+// Format tag for display
+const displayTag = tag
+  ?.replace(/-/g, ' ')
+  .split(' ')
+  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+  .join(' ');
+
+// Fetch blog posts for this tag
+let blogPosts = [];
+let totalPosts = 0;
+let allTags = [];
+
+try {
+  const db = Astro.locals.runtime?.env?.DB;
+  if (db) {
+    // Fetch all tags for the list
+    const tagsResult = await db.prepare(`
+      SELECT 
+        t.id,
+        t.name,
+        (
+          SELECT COUNT(DISTINCT pt.post_id)
+          FROM blog_post_tags pt
+          INNER JOIN blog_posts p ON pt.post_id = p.id
+          WHERE pt.tag_id = t.id AND p.status = 'published'
+        ) as count
+      FROM blog_tags t
+      HAVING count > 0
+      ORDER BY count DESC, t.name ASC
+      LIMIT 20
+    `).all();
+    
+    allTags = tagsResult.results?.map(t => ({
+      name: t.name,
+      slug: t.slug || t.name.toLowerCase().replace(/\s+/g, '-'),
+      count: Number(t.count) || 0,
+      active: t.slug === tag || t.name.toLowerCase().replace(/\s+/g, '-') === tag
+    })) || [];
+    
+    // First get the tag ID using the slug
+    const tagResult = await db.prepare(`
+      SELECT id FROM blog_tags 
+      WHERE slug = ?
+      LIMIT 1
+    `).bind(tag).first();
+    
+    if (tagResult) {
+      // Get posts for this tag - simpler query first
+      const postIds = await db.prepare(`
+        SELECT DISTINCT p.id
+        FROM blog_posts p
+        INNER JOIN blog_post_tags pt ON p.id = pt.post_id
+        WHERE p.status = 'published' AND pt.tag_id = ?
+      `).bind(tagResult.id).all();
+      
+      if (postIds.results && postIds.results.length > 0) {
+        // Now get full post details for each post
+        const postPromises = postIds.results.map(async (post) => {
+          const fullPost = await db.prepare(`
+            SELECT 
+              p.*,
+              u.username as author_name,
+              u.role as author_role,
+              u.avatar as author_avatar
+            FROM blog_posts p
+            LEFT JOIN admin_users u ON p.author_id = u.id
+            WHERE p.id = ?
+          `).bind(post.id).first();
+          
+          // Get categories for this post
+          const categories = await db.prepare(`
+            SELECT GROUP_CONCAT(c.name) as categories
+            FROM blog_categories c
+            INNER JOIN blog_post_categories pc ON c.id = pc.category_id
+            WHERE pc.post_id = ?
+          `).bind(post.id).first();
+          
+          // Get tags for this post
+          const tags = await db.prepare(`
+            SELECT GROUP_CONCAT(t.name) as tags
+            FROM blog_tags t
+            INNER JOIN blog_post_tags pt ON t.id = pt.tag_id
+            WHERE pt.post_id = ?
+          `).bind(post.id).first();
+          
+          return {
+            ...fullPost,
+            categories: categories?.categories || '',
+            tags: tags?.tags || ''
+          };
+        });
+        
+        blogPosts = await Promise.all(postPromises);
+        blogPosts = blogPosts.map(post => {
+          // Process image URL to ensure it's properly formatted
+          let coverImage = post.cover_image;
+          if (coverImage) {
+            // If it's a full URL, use it as is
+            if (coverImage.startsWith('http')) {
+              // Already a full URL
+            } else if (coverImage.startsWith('/assets/')) {
+              // Relative asset path - keep as is
+            } else if (coverImage.startsWith('assets/')) {
+              // Missing leading slash
+              coverImage = '/' + coverImage;
+            } else {
+              // Assume it's a regular image path
+              if (!coverImage.startsWith('/')) {
+                coverImage = '/' + coverImage;
+              }
+            }
+          }
+          return {
+            ...post,
+            cover_image: coverImage
+          };
+        });
+        blogPosts.sort((a, b) => {
+          const dateA = new Date(a.published_at || 0).getTime();
+          const dateB = new Date(b.published_at || 0).getTime();
+          return dateB - dateA;
+        });
+      }
+      
+      totalPosts = blogPosts.length;
+    }
+  }
+} catch (err) {
+  console.error('Error fetching tag posts:', err);
+}
+
+// Fallback sample data for development
+if (blogPosts.length === 0) {
+  blogPosts = [
+    {
+      id: '1',
+      title: 'Introduction to Cryptocurrency Trading',
+      slug: 'intro-cryptocurrency-trading',
+      excerpt: 'Learn the basics of cryptocurrency trading, including market analysis, risk management, and trading strategies.',
+      cover_image: '/img/blog/crypto-trading.jpg',
+      published_at: new Date().toISOString(),
+      author_name: 'Trading Team',
+      author_role: 'Market Analyst',
+      author_avatar: null,
+      categories: 'Trading',
+      tags: displayTag,
+      view_count: 2340,
+      read_time: 10
+    },
+    {
+      id: '2',
+      title: 'Blockchain Technology Explained',
+      slug: 'blockchain-technology-explained',
+      excerpt: 'A deep dive into blockchain technology, consensus mechanisms, and their applications beyond cryptocurrency.',
+      cover_image: '/img/blog/blockchain-tech.jpg',
+      published_at: new Date(Date.now() - 172800000).toISOString(),
+      author_name: 'Tech Team',
+      author_role: 'Blockchain Developer',
+      author_avatar: null,
+      categories: 'Technology',
+      tags: displayTag,
+      view_count: 1567,
+      read_time: 15
+    }
+  ];
+  totalPosts = 2;
+}
+---
+
+<Layout title={`Articles tagged "${displayTag}"`}>
+  <div class="tag-page">
+    <div class="container">
+      <!-- Page Header -->
+      <div class="page-header">
+        <nav class="breadcrumb">
+          <a href="/">Home</a>
+          <span>/</span>
+          <a href="/blog">Blog</a>
+          <span>/</span>
+          <span class="current">Tag: {displayTag}</span>
+        </nav>
+        
+        <div class="header-content">
+          <span class="tag-icon">#</span>
+          <div>
+            <h1 class="page-title">{displayTag}</h1>
+            <p class="page-subtitle">
+              {totalPosts} {totalPosts === 1 ? 'article' : 'articles'} tagged with "{displayTag}"
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tags List -->
+      {allTags.length > 0 && (
+        <div class="tags-section">
+          <h2 class="section-title">Popular Tags</h2>
+          <div class="tags-list">
+            {allTags.map(t => (
+              <a 
+                href={`/blog/tag/${t.slug}`} 
+                class={`tag-item ${t.active ? 'active' : ''}`}
+              >
+                <span class="tag-hash">#</span>
+                <span class="tag-name">{t.name}</span>
+                <span class="tag-count">{t.count}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Blog Posts Grid -->
+      <div class="posts-grid">
+        {blogPosts.length > 0 ? (
+          blogPosts.map(post => (
+            <article class="blog-card">
+              <a href={`/blog/${post.slug}`} class="card-link">
+                <div class="card-image">
+                  {(() => {
+                    const imageSrc = post.cover_image || '/img/blog/default-cover.jpg';
+                    // Extract just the path portion if it's a full URL to our own domain
+                    const imageUrl = imageSrc.includes('blog-website-v2-dev.ggenega.workers.dev') 
+                      ? imageSrc.split('blog-website-v2-dev.ggenega.workers.dev')[1]
+                      : imageSrc;
+                    return (
+                      <>
+                        <img 
+                          src={imageUrl} 
+                          alt={post.title}
+                          loading="lazy"
+                          decoding="async"
+                          onerror="this.src='/img/blog/default-cover.jpg'"
+                        />
+                        <div class="card-overlay">
+                          <span class="view-count">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            {post.view_count || 0}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+                
+                <div class="card-content">
+                  <div class="card-meta">
+                    {post.categories && (
+                      <a href={`/blog/category/${post.categories.split(',')[0].toLowerCase().replace(/\s+/g, '-')}`} class="category-badge">
+                        {post.categories.split(',')[0]}
+                      </a>
+                    )}
+                    <span class="read-time">{post.read_time || 5} min read</span>
+                  </div>
+                  
+                  <h2 class="card-title">{post.title}</h2>
+                  
+                  {post.excerpt && (
+                    <p class="card-excerpt">{post.excerpt}</p>
+                  )}
+                  
+                  {post.tags && (
+                    <div class="card-tags">
+                      {post.tags.split(',').slice(0, 3).map(t => (
+                        <a href={`/blog/tag/${t.trim().toLowerCase().replace(/\s+/g, '-')}`} class="tag-badge">
+                          #{t.trim()}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div class="card-footer">
+                    <div class="author-info">
+                      <img 
+                        src={post.author_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.author_name || 'Author')}&background=6366f1&color=fff&size=100`}
+                        alt={post.author_name}
+                        class="author-avatar"
+                        width="32"
+                        height="32"
+                      />
+                      <div class="author-details">
+                        <a href={`/author/${post.author_name?.toLowerCase().replace(/\s+/g, '-')}`} class="author-name">
+                          {post.author_name}
+                        </a>
+                        <span class="publish-date">
+                          {new Date(post.published_at).toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </a>
+            </article>
+          ))
+        ) : (
+          <div class="no-posts">
+            <div class="empty-icon">🏷️</div>
+            <h2>No articles found</h2>
+            <p>There are no articles tagged with "{displayTag}" yet.</p>
+            <a href="/blog" class="btn btn-primary">Browse All Articles</a>
+          </div>
+        )}
+      </div>
+
+      <!-- Related Tags -->
+      <div class="related-section">
+        <h3>Explore Related Tags</h3>
+        <div class="related-tags">
+          <a href="/blog/tag/defi" class="tag-pill">DeFi</a>
+          <a href="/blog/tag/blockchain" class="tag-pill">Blockchain</a>
+          <a href="/blog/tag/cryptocurrency" class="tag-pill">Cryptocurrency</a>
+          <a href="/blog/tag/web3" class="tag-pill">Web3</a>
+          <a href="/blog/tag/smart-contracts" class="tag-pill">Smart Contracts</a>
+          <a href="/blog/tag/trading" class="tag-pill">Trading</a>
+          <a href="/blog/tag/security" class="tag-pill">Security</a>
+          <a href="/blog/tag/nft" class="tag-pill">NFT</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .tag-page {
+    min-height: 100vh;
+    padding: var(--space-2xl) 0;
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-xl);
+  }
+
+  /* Breadcrumb Navigation */
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-xl);
+    line-height: 1;
+  }
+
+  .breadcrumb a,
+  .breadcrumb span {
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    line-height: 24px;
+  }
+
+  .breadcrumb a {
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: color var(--transition-base);
+  }
+
+  .breadcrumb a:hover {
+    color: var(--color-primary);
+  }
+
+  .breadcrumb > span:not(.current) {
+    color: var(--color-text-muted);
+    padding: 0 var(--space-xs);
+  }
+
+  .breadcrumb .current {
+    color: var(--color-text);
+    font-weight: 500;
+  }
+
+  /* Page Header */
+  .page-header {
+    margin-bottom: var(--space-3xl);
+  }
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+  }
+
+  .tag-icon {
+    font-size: var(--text-6xl);
+    color: var(--color-primary);
+    opacity: 0.2;
+    font-weight: 700;
+  }
+
+  .page-title {
+    font-size: var(--text-4xl);
+    font-weight: 700;
+    margin-bottom: var(--space-sm);
+    color: var(--color-text);
+  }
+
+  .page-subtitle {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+  }
+
+  /* Posts Grid */
+  .posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: var(--space-xl);
+    margin-bottom: var(--space-3xl);
+  }
+
+  /* Blog Card */
+  .blog-card {
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-base);
+    height: 100%;
+    border: 1px solid var(--color-border);
+  }
+
+  .blog-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--color-primary-alpha-20);
+  }
+
+  .card-link {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .card-image {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: var(--color-background);
+    position: relative;
+  }
+
+  .card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+  }
+
+  .blog-card:hover .card-image img {
+    transform: scale(1.05);
+  }
+
+  .card-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: var(--space-sm);
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom-left-radius: var(--radius-md);
+  }
+
+  .view-count {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: white;
+    font-size: var(--text-sm);
+  }
+
+  .card-content {
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-md);
+    font-size: var(--text-sm);
+  }
+
+  .category-badge {
+    padding: 4px 12px;
+    background: var(--color-primary-alpha-10);
+    color: var(--color-primary);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .category-badge:hover {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .read-time {
+    color: var(--color-text-muted);
+  }
+
+  .card-title {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-sm);
+    line-height: 1.3;
+  }
+
+  .card-excerpt {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: var(--space-md);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+  }
+
+  .tag-badge {
+    padding: 2px 8px;
+    background: var(--color-background);
+    color: var(--color-text-muted);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    text-decoration: none;
+    transition: all var(--transition-base);
+  }
+
+  .tag-badge:hover {
+    background: var(--color-secondary-alpha-10);
+    color: var(--color-secondary);
+  }
+
+  .card-footer {
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    margin-top: auto;
+  }
+
+  .author-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .author-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+  }
+
+  .author-details {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .author-name {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text);
+    text-decoration: none;
+    transition: color var(--transition-base);
+  }
+
+  .author-name:hover {
+    color: var(--color-primary);
+  }
+
+  .publish-date {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+  }
+
+  /* No Posts */
+  .no-posts {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-3xl);
+  }
+
+  .empty-icon {
+    font-size: var(--text-6xl);
+    margin-bottom: var(--space-lg);
+  }
+
+  .no-posts h2 {
+    font-size: var(--text-2xl);
+    font-weight: 600;
+    margin-bottom: var(--space-md);
+  }
+
+  .no-posts p {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xl);
+  }
+
+  /* Tags Section */
+  .tags-section {
+    margin-bottom: var(--space-2xl);
+    padding: var(--space-xl);
+    background: var(--color-surface);
+    border-radius: var(--radius-lg);
+  }
+
+  .section-title {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-lg);
+    color: var(--color-text);
+  }
+
+  .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-background);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    color: var(--color-text);
+    font-size: var(--text-sm);
+    transition: all var(--transition-base);
+  }
+
+  .tag-item:hover {
+    background: var(--color-secondary-alpha-10);
+    border-color: var(--color-secondary);
+    color: var(--color-secondary);
+    transform: translateY(-2px);
+  }
+
+  .tag-item.active {
+    background: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: white;
+  }
+
+  .tag-hash {
+    opacity: 0.6;
+    font-weight: 600;
+  }
+
+  .tag-name {
+    font-weight: 500;
+  }
+
+  .tag-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    margin-left: 4px;
+  }
+
+  .tag-item.active .tag-count {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Related Tags */
+  .related-section {
+    padding: var(--space-2xl) 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .related-section h3 {
+    font-size: var(--text-xl);
+    font-weight: 600;
+    margin-bottom: var(--space-lg);
+  }
+
+  .related-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .tag-pill {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    transition: all var(--transition-base);
+  }
+
+  .tag-pill:hover {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+  }
+
+  .btn {
+    display: inline-block;
+    padding: var(--space-md) var(--space-xl);
+    background: var(--color-primary);
+    color: white;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all var(--transition-base);
+  }
+
+  .btn:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-2px);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container {
+      padding: 0 var(--space-md);
+    }
+
+    .header-content {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-md);
+    }
+
+    .tag-icon {
+      font-size: var(--text-4xl);
+    }
+
+    .page-title {
+      font-size: var(--text-3xl);
+    }
+
+    .posts-grid {
+      grid-template-columns: 1fr;
+      gap: var(--space-lg);
+    }
+
+    .related-tags {
+      justify-content: center;
+    }
+  }
+</style>
